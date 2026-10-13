@@ -1,0 +1,6 @@
+.server.pid
+.server.log
+snap_before.txt
+snap_after.txt
+tests_out.txt
+node_modules/
