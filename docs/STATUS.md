@@ -20,7 +20,7 @@ Atualizado: 2026-10-13 (Etapa 4 quase completa; falta importação de backup/mig
 | 4 Funcionalidades de domínio | **Em andamento** — telas e motor prontos (172 testes); migração 0006 (importação) escrita e testada localmente mas NÃO aplicada; faltam limpeza R7 e testes de UI. Ver `docs/etapa4-registro.md` |
 | 5 Persistência e sincronização | Código pronto e enviado ao GitHub (commit eb62f6a). Realtime e conflitos não testados contra o serviço real. Ver `docs/etapa5-registro.md` |
 | 6 Validação | **Parcial** (191 testes de app, 270 de banco, build, audit ok; faltam integração real, login real, UI dos demais fluxos). Ver `docs/etapa6-registro.md` |
-| 7 Publicação e documentação | Não iniciada |
+| 7 Publicação e documentação | **Parcial** — workflows `ci.yml`/`deploy.yml`, README e `docs/operacao.md` escritos; **nunca executados no GitHub**; Pages e variáveis ainda precisam ser configurados pelo Luc |
 
 ## Decisões e combinados do Luc (não reabrir)
 - Repo novo `lucskydev/auxdec` (nada foi enviado ainda). Repo antigo `lucskydev/decisoes` intocável.

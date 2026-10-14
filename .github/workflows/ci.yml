@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App (tipos, lint, testes, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Build (valores públicos fictícios; só valida a compilação)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://exemplo.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+
+  banco:
+    name: Banco (migrações e testes SQL em Postgres descartável)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/pg-local/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: npm ci
+        working-directory: tools/pg-local
+      - name: Rodar migrações + testes
+        working-directory: tools/pg-local
+        run: |
+          chmod +x *.sh
+          ./run-all.sh > saida.txt 2>&1 < /dev/null || true
+          cat saida.txt | tail -40
+          grep -q "psql exit code: 0" saida.txt
+          if grep -q "^FAIL\|FALHOU" saida.txt; then exit 1; fi
+          n=$(sed -n "s/.*registradas: \([0-9]*\).*/\1/p" saida.txt)
+          echo "asserções ok: $n"
+          test "${n:-0}" -ge 270
