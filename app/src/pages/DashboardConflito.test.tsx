@@ -55,3 +55,24 @@ describe('edição de escopo com conflito de versão', () => {
     expect((screen.getByRole('button', { name: 'Salvar' }) as HTMLButtonElement).disabled).toBe(false);
   });
 });
+
+describe('exportar backup avulso', () => {
+  it('baixa o backup do escopo pelo botão do card', async () => {
+    const { carregarEscopo } = await import('../services/loader');
+    const { exportarEscopo, baixarBlob } = await import('../services/backupZip');
+    vi.mocked(carregarEscopo).mockResolvedValue({} as never);
+    vi.mocked(exportarEscopo).mockResolvedValue({ blob: new Blob(['x']), nomeArquivo: 'b.zip', falhas: [] } as never);
+    render(<MemoryRouter><DashboardPage /></MemoryRouter>);
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar backup' }));
+    await vi.waitFor(() => expect(baixarBlob).toHaveBeenCalledTimes(1));
+  });
+  it('com imagens que falharam, não entrega backup incompleto', async () => {
+    const { exportarEscopo, baixarBlob } = await import('../services/backupZip');
+    vi.mocked(baixarBlob).mockClear();
+    vi.mocked(exportarEscopo).mockResolvedValue({ blob: new Blob(['x']), nomeArquivo: 'b.zip', falhas: ['p1'] } as never);
+    render(<MemoryRouter><DashboardPage /></MemoryRouter>);
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar backup' }));
+    await vi.waitFor(() => expect(exportarEscopo).toHaveBeenCalled());
+    expect(baixarBlob).not.toHaveBeenCalled();
+  });
+});

@@ -73,6 +73,7 @@ export function DashboardPage() {
   const [excluindo, setExcluindo] = useState(false);
   const [erroExcluir, setErroExcluir] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
+  const [exportandoId, setExportandoId] = useState<string | null>(null);
 
   if (loading) return <Spinner label="Carregando escopos…" />;
   if (error) {
@@ -107,6 +108,21 @@ export function DashboardPage() {
     } catch (e) {
       setErroExcluir(e instanceof Error ? e.message : toAppError(e).message);
       setEtapaExcluir('inicio');
+    }
+  }
+
+  /** Exporta o backup completo (dados + imagens) a qualquer momento. Imagens que não baixarem cancelam a exportação: backup incompleto não é entregue. */
+  async function exportarBackup(e: Escopo) {
+    setExportandoId(e.id);
+    try {
+      const r = await exportarEscopo(await carregarEscopo(e.id));
+      if (r.falhas.length > 0) throw new Error(`${r.falhas.length} imagem(ns) não puderam ser baixadas; backup incompleto não foi gerado.`);
+      baixarBlob(r.blob, r.nomeArquivo);
+      notify('success', `Backup de "${e.nome}" baixado.`);
+    } catch (err) {
+      notify('error', `Falha ao exportar o backup: ${err instanceof Error ? err.message : toAppError(err).message}`);
+    } finally {
+      setExportandoId(null);
     }
   }
 
@@ -148,6 +164,7 @@ export function DashboardPage() {
                 <div className="row-actions">
                   <Link to="/analise" className="btn" onClick={() => selecionar(s.id)}>Abrir análise</Link>
                   <button type="button" className="btn" onClick={() => setModo({ tipo: 'editar', escopo: s })}>Editar</button>
+                  <button type="button" className="btn" onClick={() => void exportarBackup(s)} disabled={exportandoId !== null}>{exportandoId === s.id ? 'Gerando backup…' : 'Exportar backup'}</button>
                   <button type="button" className="btn btn-danger" onClick={() => abrirExclusao(s)}>Excluir</button>
                 </div>
               </li>

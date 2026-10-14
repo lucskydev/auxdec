@@ -31,3 +31,6 @@ Atualizado: 2026-10-13. Código em `app/src/`. Resultado atual: tsc, eslint e 17
 
 ## Nota sobre os testes de banco
 As RPCs terminam com `set constraints all immediate`; por isso `t.popular` (06) chama `set constraints all deferred` antes de cada RPC, já que ali várias RPCs dividem uma transação. Em uso real cada RPC é uma transação própria.
+
+## Correção pós-validação (2026-10-14)
+O backup só era acessível pelo diálogo de exclusão. Adicionado botão "Exportar backup" em cada escopo do Dashboard (bloqueia se alguma imagem falhar). 2 testes.
