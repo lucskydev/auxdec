@@ -31,13 +31,23 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Conferir configuração (não imprime valores)
+        run: |
+          falta=0
+          for n in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY; do
+            if [ -z "${!n}" ]; then echo "::error::$n está vazia. Crie em Settings > Secrets and variables > Actions > aba Variables > Repository variables, com este nome exato."; falta=1; fi
+          done
+          exit $falta
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - name: Build
         run: npm run build
         env:
-          # Configure em Settings > Secrets and variables > Actions > Variables.
-          # São valores PÚBLICOS (URL do projeto e chave publishable). Nunca use service_role.
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          # Valores PÚBLICOS (URL do projeto e chave publishable). Nunca use service_role.
+          # Variáveis de repositório; aceita Secrets de repositório como alternativa.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app/dist
