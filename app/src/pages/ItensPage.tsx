@@ -8,7 +8,7 @@ import { criarItem, atualizarItem, excluirItem, type TabelaItem, type ItemEntrad
 import { toAppError } from '../services/errors';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Carga } from '../ui/Carga';
-import { Dialog } from '../ui/Dialog';
+import { diferencas, EditDialog, type ConflitoInfo } from '../ui/EditDialog';
 import { FormField } from '../ui/FormField';
 import { useToasts } from '../ui/Toasts';
 
@@ -37,6 +37,7 @@ function validarNomeItem(nome: string, existentes: Item[], itemId: string | null
 
 function FormItem({ tabela, item, d, onClose, onSaved }: { tabela: TabelaItem; item: Item | null; d: DadosEscopo; onClose: () => void; onSaved: () => void }) {
   const existentes = tabela === 'v2_itens_modelo' ? d.itensModelo : d.itensProduto;
+  const [base, setBase] = useState(item); // versão sobre a qual o usuário edita; muda ao reaplicar após conflito
   const [nome, setNome] = useState(item?.nome ?? '');
   const [descricao, setDescricao] = useState(item?.descricao ?? '');
   const [tipo, setTipo] = useState<TipoItem>(item?.tipo ?? 'numerico');
@@ -46,20 +47,23 @@ function FormItem({ tabela, item, d, onClose, onSaved }: { tabela: TabelaItem; i
   const [vmax, setVmax] = useState(numeroParaTexto(item?.valor_max));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [emConflito, setEmConflito] = useState(false);
+  const instantaneo = JSON.stringify([nome, descricao, tipo, unidade, casas, vmin, vmax]);
+  const [inicial] = useState(instantaneo);
 
-  const erroNome = nome === '' && !item ? null : validarNomeItem(nome, existentes, item?.id ?? null, d, tabela);
+  const erroNome = nome === '' && !base ? null : validarNomeItem(nome, existentes, base?.id ?? null, d, tabela);
   const num = tipo === 'numerico';
   const c = lerNumero(casas), mi = lerNumero(vmin), ma = lerNumero(vmax);
   const erroCasas = !num ? null : !c.ok ? c.erro : c.valor !== null && (!Number.isInteger(c.valor) || c.valor < 0 || c.valor > 10) ? 'Use um inteiro de 0 a 10.' : null;
   const erroMin = !num ? null : !mi.ok ? mi.erro : null;
   const erroMax = !num ? null : !ma.ok ? ma.erro : mi.ok && ma.ok && mi.valor !== null && ma.valor !== null && mi.valor > ma.valor ? 'O máximo não pode ser menor que o mínimo.' : null;
-  const invalido = validarNomeItem(nome, existentes, item?.id ?? null, d, tabela) !== null || !!erroCasas || !!erroMin || !!erroMax;
+  const invalido = validarNomeItem(nome, existentes, base?.id ?? null, d, tabela) !== null || !!erroCasas || !!erroMin || !!erroMax;
 
   async function salvar() {
     if (invalido || !c.ok || !mi.ok || !ma.ok) return;
     setSalvando(true);
     setErro(null);
-    const base = {
+    const corpo = {
       nome, descricao: descricao.trim() || null,
       unidade: num ? unidade.trim() || null : null,
       casas_decimais: num ? c.valor : null,
@@ -67,30 +71,33 @@ function FormItem({ tabela, item, d, onClose, onSaved }: { tabela: TabelaItem; i
       valor_max: num ? ma.valor : null,
     };
     try {
-      if (item) await atualizarItem(tabela, item, base);
-      else await criarItem(tabela, d.escopo.id, { ...base, tipo } satisfies ItemEntrada);
+      if (base) await atualizarItem(tabela, base, corpo);
+      else await criarItem(tabela, d.escopo.id, { ...corpo, tipo } satisfies ItemEntrada);
       onSaved();
     } catch (e) {
-      setErro(toAppError(e).message);
+      const ae = toAppError(e);
+      if (base && (ae.kind === 'version' || ae.kind === 'notfound')) setEmConflito(true);
+      setErro(ae.message);
       setSalvando(false);
     }
   }
 
+  const atual = emConflito && base ? (existentes.find((i) => i.id === base.id) ?? null) : undefined;
+  const conflito: ConflitoInfo | null = emConflito && base ? {
+    baseVersao: base.versao,
+    atual,
+    diffs: atual ? diferencas([
+      ['Nome', nome, atual.nome], ['Descrição', descricao, atual.descricao ?? ''], ['Unidade', unidade, atual.unidade ?? ''],
+      ['Casas decimais', casas, numeroParaTexto(atual.casas_decimais)], ['Valor mínimo', vmin, numeroParaTexto(atual.valor_min)], ['Valor máximo', vmax, numeroParaTexto(atual.valor_max)],
+    ]) : [],
+    onReaplicar: () => { if (atual) { setBase(atual); setEmConflito(false); setErro(null); } },
+  } : null;
+
   return (
-    <Dialog
-      open
-      title={item ? 'Editar item' : 'Novo item'}
-      onClose={() => !salvando && onClose()}
-      actions={
-        <>
-          <button type="button" className="btn" onClick={onClose} disabled={salvando}>Cancelar</button>
-          <button type="button" className="btn btn-primary" onClick={() => void salvar()} disabled={salvando || invalido}>{salvando ? 'Salvando…' : 'Salvar'}</button>
-        </>
-      }
-    >
+    <EditDialog title={base ? 'Editar item' : 'Novo item'} onClose={onClose} onSave={() => void salvar()} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
       <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
-      <FormField label="Tipo" hint={item ? 'O tipo não pode ser alterado depois de criado.' : undefined}>
-        <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoItem)} disabled={item !== null}>
+      <FormField label="Tipo" hint={base ? 'O tipo não pode ser alterado depois de criado.' : undefined}>
+        <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoItem)} disabled={base !== null}>
           {Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </FormField>
@@ -103,8 +110,7 @@ function FormItem({ tabela, item, d, onClose, onSaved }: { tabela: TabelaItem; i
           <FormField label="Valor máximo (opcional)" error={erroMax}><input inputMode="decimal" value={vmax} onChange={(e) => setVmax(e.target.value)} /></FormField>
         </>
       )}
-      {erro && <p className="notice notice-error" role="alert">{erro}</p>}
-    </Dialog>
+    </EditDialog>
   );
 }
 

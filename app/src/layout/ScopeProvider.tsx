@@ -3,6 +3,7 @@ import type { Escopo } from '../domain/types';
 import { listarEscopos } from '../services/escopos';
 import { toAppError, type AppError } from '../services/errors';
 import { prefs } from '../lib/storage';
+import { assinarListaDeEscopos, criarAgendador } from '../services/realtime';
 
 interface ScopeState {
   escopos: Escopo[];
@@ -44,6 +45,16 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
       ativa = false;
     };
   }, [tentativa]);
+
+  // Escopos criados, renomeados ou excluídos em outra sessão aparecem sem recarregar a página.
+  useEffect(() => {
+    const ag = criarAgendador(() => setTentativa((n) => n + 1), 500);
+    const parar = assinarListaDeEscopos(() => ag.agendar());
+    return () => {
+      ag.cancelar();
+      parar();
+    };
+  }, []);
 
   const recarregar = useCallback(async () => {
     setLoading(true);

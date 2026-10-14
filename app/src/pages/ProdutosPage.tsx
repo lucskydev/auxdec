@@ -2,13 +2,13 @@ import { useState } from 'react';
 import type { DadosEscopo, Produto } from '../domain/types';
 import { conflitosDeNomes } from '../domain/inheritance';
 import { validarNome } from '../domain/names';
-import { desfazerEnvios, erroDoValor, estadoInicial, montarValores, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
+import { desfazerEnvios, erroDoValor, estadoInicial, instantaneoEstado, montarValores, resumoEstado, resumoSalvo, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
 import { formatarNumero } from '../features/numeros';
 import { excluirProduto, salvarProduto } from '../services/escrita';
 import { toAppError } from '../services/errors';
 import { Carga } from '../ui/Carga';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Dialog } from '../ui/Dialog';
+import { diferencas, EditDialog, type ConflitoInfo } from '../ui/EditDialog';
 import { FormField } from '../ui/FormField';
 import { useToasts } from '../ui/Toasts';
 
@@ -16,19 +16,23 @@ interface Edicao { produto: Produto | null; copiaDe: Produto | null }
 
 function FormProduto({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: Edicao; onClose: () => void; onSaved: () => void }) {
   const origem = edicao.produto ?? edicao.copiaDe;
-  const valoresOrigem = origem ? d.produtoValores.filter((v) => v.produto_id === origem.id).map((v) => ({ item_id: v.item_produto_id, ...v })) : [];
+  const valoresDe = (p: Produto | null) => (p ? d.produtoValores.filter((v) => v.produto_id === p.id).map((v) => ({ item_id: v.item_produto_id, ...v })) : []);
+  const [base, setBase] = useState(edicao.produto);
   const [nome, setNome] = useState(edicao.copiaDe ? `${edicao.copiaDe.nome} (cópia)` : (edicao.produto?.nome ?? ''));
   const [descricao, setDescricao] = useState(origem?.descricao ?? '');
   const [modeloId, setModeloId] = useState<string>(origem?.modelo_id ?? '');
-  const [estado, setEstado] = useState<EstadoValores>(() => estadoInicial(d.itensProduto, valoresOrigem));
+  const [estado, setEstado] = useState<EstadoValores>(() => estadoInicial(d.itensProduto, valoresDe(origem)));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [emConflito, setEmConflito] = useState(false);
+  const instantaneo = JSON.stringify([nome, descricao, modeloId, instantaneoEstado(estado)]);
+  const [inicial] = useState(instantaneo);
 
   const proprios = d.itensProduto.filter((i) => estado[i.id]?.incluido).map((i) => i.id);
   const conflitos = conflitosDeNomes(d, modeloId || null, proprios);
-  const erroNome = nome === '' && !edicao.produto ? null : validarNome(nome, d.produtos, edicao.produto?.id);
+  const erroNome = nome === '' && !base ? null : validarNome(nome, d.produtos, base?.id);
   const errosValores = d.itensProduto.filter((i) => erroDoValor(i, estado[i.id]!) !== null);
-  const invalido = validarNome(nome, d.produtos, edicao.produto?.id) !== null || errosValores.length > 0 || conflitos.length > 0;
+  const invalido = validarNome(nome, d.produtos, base?.id) !== null || errosValores.length > 0 || conflitos.length > 0;
 
   const herdados = modeloId ? d.modeloValores.filter((v) => v.modelo_id === modeloId) : [];
   const itensModelo = new Map(d.itensModelo.map((i) => [i.id, i]));
@@ -41,21 +45,32 @@ function FormProduto({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: 
     try {
       const m = await montarValores(d.escopo.id, d.itensProduto, estado);
       enviadas = m.enviadas;
-      await salvarProduto({ escopoId: d.escopo.id, id: edicao.produto?.id ?? null, versao: edicao.produto?.versao ?? null, nome, descricao: descricao.trim() || null, modeloId: modeloId || null, valores: m.valores });
+      await salvarProduto({ escopoId: d.escopo.id, id: base?.id ?? null, versao: base?.versao ?? null, nome, descricao: descricao.trim() || null, modeloId: modeloId || null, valores: m.valores });
       onSaved();
     } catch (e) {
       await desfazerEnvios(enviadas);
-      setErro(toAppError(e).message);
+      const ae = toAppError(e);
+      if (base && (ae.kind === 'version' || ae.kind === 'notfound')) setEmConflito(true);
+      setErro(ae.message);
       setSalvando(false);
     }
   }
 
+  const nomeModelo = (id: string | null) => (id ? (d.modelos.find((m) => m.id === id)?.nome ?? '?') : '(sem modelo)');
+  const atual = emConflito && base ? (d.produtos.find((p) => p.id === base.id) ?? null) : undefined;
+  const conflito: ConflitoInfo | null = emConflito && base ? {
+    baseVersao: base.versao,
+    atual,
+    diffs: atual ? diferencas([
+      ['Nome', nome, atual.nome], ['Descrição', descricao, atual.descricao ?? ''],
+      ['Modelo', nomeModelo(modeloId || null), nomeModelo(atual.modelo_id)],
+      ['Itens próprios', resumoEstado(d.itensProduto, estado), resumoSalvo(d.itensProduto, valoresDe(atual))],
+    ]) : [],
+    onReaplicar: () => { if (atual) { setBase(atual); setEmConflito(false); setErro(null); } },
+  } : null;
+
   return (
-    <Dialog open title={edicao.produto ? 'Editar produto' : 'Novo produto'} onClose={() => !salvando && onClose()}
-      actions={<>
-        <button type="button" className="btn" onClick={onClose} disabled={salvando}>Cancelar</button>
-        <button type="button" className="btn btn-primary" onClick={() => void salvar()} disabled={salvando || invalido}>{salvando ? 'Salvando…' : 'Salvar'}</button>
-      </>}>
+    <EditDialog title={base ? 'Editar produto' : 'Novo produto'} onClose={onClose} onSave={() => void salvar()} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
       <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
       <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
       <FormField label="Modelo">
@@ -82,8 +97,7 @@ function FormProduto({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: 
       )}
       <h3>Itens próprios</h3>
       <ValoresEditor d={d} itens={d.itensProduto} estado={estado} onChange={setEstado} selecionavel desabilitar={salvando} />
-      {erro && <p className="notice notice-error" role="alert">{erro}</p>}
-    </Dialog>
+    </EditDialog>
   );
 }
 

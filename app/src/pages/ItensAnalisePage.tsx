@@ -12,7 +12,7 @@ import { excluirItemAnalise, salvarAgregado, salvarFormula, type ComponenteEntra
 import { toAppError } from '../services/errors';
 import { Carga } from '../ui/Carga';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Dialog } from '../ui/Dialog';
+import { diferencas, EditDialog, type ConflitoInfo } from '../ui/EditDialog';
 import { FormField } from '../ui/FormField';
 import { useToasts } from '../ui/Toasts';
 
@@ -29,6 +29,8 @@ function opcoesDeReferencia(d: DadosEscopo, selfId: string | null) {
 
 function FormAnalise({ d, item, tipoNovo, onClose, onSaved }: { d: DadosEscopo; item: ItemAnalise | null; tipoNovo: 'formula' | 'agregado'; onClose: () => void; onSaved: () => void }) {
   const tipo = item?.tipo ?? tipoNovo;
+  const [base, setBase] = useState(item);
+  const [emConflito, setEmConflito] = useState(false);
   const nomes = nomesDe(d);
   const [nome, setNome] = useState(item?.nome ?? '');
   const [descricao, setDescricao] = useState(item?.descricao ?? '');
@@ -47,9 +49,12 @@ function FormAnalise({ d, item, tipoNovo, onClose, onSaved }: { d: DadosEscopo; 
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const [insercao, setInsercao] = useState('');
 
-  const erroNomeBase = nome === '' && !item ? null : validarNome(nome, d.itensAnalise, item?.id);
+  const instantaneo = JSON.stringify([nome, descricao, texto, peso, comps.map((c) => [c.ref, c.peso, c.direcao, c.lmin, c.lmax])]);
+  const [inicial] = useState(instantaneo);
+
+  const erroNomeBase = nome === '' && !base ? null : validarNome(nome, d.itensAnalise, base?.id);
   const erroNome = erroNomeBase ?? (CARACTERES_PROIBIDOS_EM_NOME.test(nome) ? 'O nome não pode conter colchetes [ ou ].' : null);
-  const opcoes = opcoesDeReferencia(d, item?.id ?? null);
+  const opcoes = opcoesDeReferencia(d, base?.id ?? null);
 
   // ---- fórmula
   const conv = tipo === 'formula' ? paraArmazenamento(texto, nomes) : { texto: '', naoResolvidos: [] };
@@ -60,7 +65,7 @@ function FormAnalise({ d, item, tipoNovo, onClose, onSaved }: { d: DadosEscopo; 
     else if (texto.length > MAX_FORMULA_LENGTH) errosFormula.push(`A fórmula excede ${MAX_FORMULA_LENGTH} caracteres.`);
     else if (conv.naoResolvidos.length) errosFormula.push(`Item não encontrado: ${conv.naoResolvidos.join(', ')}`);
     else {
-      const v = validarFormula(conv.texto, catalogoDe(d, item?.id ?? null), item?.id ?? null);
+      const v = validarFormula(conv.texto, catalogoDe(d, base?.id ?? null), base?.id ?? null);
       v.erros.forEach((e) => errosFormula.push(e.pos !== undefined ? `${e.mensagem} (posição ${e.pos + 1})` : e.mensagem));
       refsUsadas = v.refs;
     }
@@ -83,9 +88,9 @@ function FormAnalise({ d, item, tipoNovo, onClose, onSaved }: { d: DadosEscopo; 
       if (!p.ok || p.valor === null || p.valor < 1 || p.valor > 10) errosComp.push(`Componente ${n}: peso entre 1 e 10.`);
       if (!a.ok || a.valor === null || !b.ok || b.valor === null) errosComp.push(`Componente ${n}: informe os dois limites de normalização.`);
       else if (a.valor === b.valor) errosComp.push(`Componente ${n}: os limites não podem ser iguais.`);
-      if (c.ref.startsWith('a:') && item) {
+      if (c.ref.startsWith('a:') && base) {
         const alvo = c.ref.slice(2);
-        if (alvo === item.id || alcanca(alvo, item.id, (x) => dependenciasDiretas(d, x))) errosComp.push(`Componente ${n}: criaria dependência circular.`);
+        if (alvo === base.id || alcanca(alvo, base.id, (x) => dependenciasDiretas(d, x))) errosComp.push(`Componente ${n}: criaria dependência circular.`);
       }
       if (c.ref && p.ok && p.valor !== null && a.ok && a.valor !== null && b.ok && b.valor !== null) {
         const k = c.ref[0];
@@ -120,24 +125,37 @@ function FormAnalise({ d, item, tipoNovo, onClose, onSaved }: { d: DadosEscopo; 
     setSalvando(true);
     setErro(null);
     try {
-      const base = { escopoId: d.escopo.id, id: item?.id ?? null, versao: item?.versao ?? null, nome, descricao: descricao.trim() || null };
-      if (tipo === 'formula') await salvarFormula({ ...base, texto: conv.texto });
-      else await salvarAgregado({ ...base, peso: pesoNum.ok && pesoNum.valor !== null ? pesoNum.valor : 1, componentes: entradas });
+      const corpo = { escopoId: d.escopo.id, id: base?.id ?? null, versao: base?.versao ?? null, nome, descricao: descricao.trim() || null };
+      if (tipo === 'formula') await salvarFormula({ ...corpo, texto: conv.texto });
+      else await salvarAgregado({ ...corpo, peso: pesoNum.ok && pesoNum.valor !== null ? pesoNum.valor : 1, componentes: entradas });
       onSaved();
     } catch (e) {
-      setErro(toAppError(e).message);
+      const ae = toAppError(e);
+      if (base && (ae.kind === 'version' || ae.kind === 'notfound')) setEmConflito(true);
+      setErro(ae.message);
       setSalvando(false);
     }
   }
 
+  const resumoLocal = comps.map((c) => `${opcoes.find((o) => o.valor === c.ref)?.rotulo ?? '?'} (peso ${c.peso}, ${c.direcao}, ${c.lmin}–${c.lmax})`).join('\n');
+  const resumoGravado = (id: string) => d.agregadoComponentes.filter((c) => c.agregado_id === id).sort((x, y) => x.ordem - y.ordem).map((c) => {
+    const ref = c.item_modelo_id ? `m:${c.item_modelo_id}` : c.item_produto_id ? `p:${c.item_produto_id}` : `a:${c.item_analise_id}`;
+    return `${opcoes.find((o) => o.valor === ref)?.rotulo ?? '?'} (peso ${c.peso}, ${c.direcao}, ${numeroParaTexto(c.lmin)}–${numeroParaTexto(c.lmax)})`;
+  }).join('\n');
+  const atual = emConflito && base ? (d.itensAnalise.find((i) => i.id === base.id) ?? null) : undefined;
+  const conflito: ConflitoInfo | null = emConflito && base ? {
+    baseVersao: base.versao,
+    atual,
+    diffs: atual ? diferencas(tipo === 'formula'
+      ? [['Nome', nome, atual.nome], ['Descrição', descricao, atual.descricao ?? ''], ['Fórmula', texto, paraExibicao(atual.formula_texto ?? '', nomes)]]
+      : [['Nome', nome, atual.nome], ['Descrição', descricao, atual.descricao ?? ''], ['Peso', peso, numeroParaTexto(atual.peso)], ['Componentes', resumoLocal, resumoGravado(atual.id)]]) : [],
+    onReaplicar: () => { if (atual) { setBase(atual); setEmConflito(false); setErro(null); } },
+  } : null;
+
   const upd = (chave: number, p: Partial<CompForm>) => setComps((l) => l.map((c) => (c.chave === chave ? { ...c, ...p } : c)));
 
   return (
-    <Dialog open title={`${item ? 'Editar' : 'Novo'} ${tipo === 'formula' ? 'item de fórmula' : 'item agregado'}`} onClose={() => !salvando && onClose()}
-      actions={<>
-        <button type="button" className="btn" onClick={onClose} disabled={salvando}>Cancelar</button>
-        <button type="button" className="btn btn-primary" onClick={() => void salvar()} disabled={salvando || invalido}>{salvando ? 'Salvando…' : 'Salvar'}</button>
-      </>}>
+    <EditDialog title={`${base ? 'Editar' : 'Novo'} ${tipo === 'formula' ? 'item de fórmula' : 'item agregado'}`} onClose={onClose} onSave={() => void salvar()} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
       <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
       <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
 
@@ -191,8 +209,7 @@ function FormAnalise({ d, item, tipoNovo, onClose, onSaved }: { d: DadosEscopo; 
           {errosComp.length > 0 && <ul className="field-error" role="alert">{[...new Set(errosComp)].map((e) => <li key={e}>{e}</li>)}</ul>}
         </>
       )}
-      {erro && <p className="notice notice-error" role="alert">{erro}</p>}
-    </Dialog>
+    </EditDialog>
   );
 }
 

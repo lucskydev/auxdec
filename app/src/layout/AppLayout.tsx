@@ -5,7 +5,29 @@ import { useGuardedAction } from '../ui/UnsavedChanges';
 import { useToasts } from '../ui/Toasts';
 import { prefs } from '../lib/storage';
 import { NAV_ITEMS } from './nav';
+import { useDados } from './DadosProvider';
 import { useScope } from './ScopeProvider';
+
+const TEXTO_SYNC = {
+  ativo: '● Sincronizado',
+  conectando: '○ Conectando…',
+  reconectando: '◌ Reconectando… (os dados podem estar desatualizados)',
+  erro: '✕ Sem sincronização ao vivo',
+} as const;
+
+function EstadoSincronizacao() {
+  const { ativo } = useScope();
+  const { sync, recarregar } = useDados();
+  if (!ativo) return null;
+  return (
+    <span className={`sync sync-${sync}`} role="status" aria-live="polite">
+      {TEXTO_SYNC[sync]}
+      {sync !== 'ativo' && sync !== 'conectando' && (
+        <button type="button" className="link-btn" onClick={recarregar}> Atualizar agora</button>
+      )}
+    </span>
+  );
+}
 
 export function AppLayout() {
   const { session, signOut } = useAuth();
@@ -66,6 +88,7 @@ export function AppLayout() {
             ))}
           </select>
         </div>
+        <EstadoSincronizacao />
         <span className="user" title={session?.user.email ?? ''}>
           {session?.user.email}
         </span>

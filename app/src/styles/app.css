@@ -129,3 +129,8 @@ textarea, input, select { font: inherit; background: var(--bg); color: var(--tex
 .lista-colunas li { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .largura { width: 5rem; }
 .texto-completo { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.sync { font-size: .8rem; white-space: nowrap; }
+.sync-ativo { color: var(--success, #6ccf8e); }
+.sync-reconectando, .sync-conectando { color: var(--warning); }
+.sync-erro { color: var(--danger); }

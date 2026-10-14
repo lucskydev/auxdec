@@ -9,7 +9,7 @@ import { exportarEscopo, baixarBlob } from '../services/backupZip';
 import { removerArquivos } from '../services/imagens';
 import { validarNome } from '../domain/names';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Dialog } from '../ui/Dialog';
+import { diferencas, EditDialog, type ConflitoInfo } from '../ui/EditDialog';
 import { FormField } from '../ui/FormField';
 import { ImportarBackup } from './ImportarBackup';
 import { Spinner } from '../ui/Spinner';
@@ -18,47 +18,49 @@ import { useToasts } from '../ui/Toasts';
 type Modo = { tipo: 'novo' } | { tipo: 'editar'; escopo: Escopo } | null;
 
 function FormEscopo({ modo, escopos, onClose, onSaved }: { modo: NonNullable<Modo>; escopos: Escopo[]; onClose: () => void; onSaved: (e: Escopo) => void }) {
-  const editando = modo.tipo === 'editar' ? modo.escopo : null;
-  const [nome, setNome] = useState(editando?.nome ?? '');
-  const [descricao, setDescricao] = useState(editando?.descricao ?? '');
+  const [base, setBase] = useState<Escopo | null>(modo.tipo === 'editar' ? modo.escopo : null);
+  const [emConflito, setEmConflito] = useState(false);
+  const [nome, setNome] = useState(base?.nome ?? '');
+  const [descricao, setDescricao] = useState(base?.descricao ?? '');
   const [salvando, setSalvando] = useState(false);
   const [erroServidor, setErroServidor] = useState<string | null>(null);
-  const erroNome = nome === '' && !editando ? null : validarNome(nome, escopos, editando?.id);
+  const erroNome = nome === '' && !base ? null : validarNome(nome, escopos, base?.id);
+  const instantaneo = JSON.stringify([nome, descricao]);
+  const [inicial] = useState(instantaneo);
 
   async function salvar() {
-    if (validarNome(nome, escopos, editando?.id)) return;
+    if (validarNome(nome, escopos, base?.id)) return;
     setSalvando(true);
     setErroServidor(null);
     try {
       const d = descricao.trim() === '' ? null : descricao.trim();
-      onSaved(editando ? await atualizarEscopo(editando, nome, d) : await criarEscopo(nome, d));
+      onSaved(base ? await atualizarEscopo(base, nome, d) : await criarEscopo(nome, d));
     } catch (e) {
-      setErroServidor(toAppError(e).message);
+      const ae = toAppError(e);
+      if (base && (ae.kind === 'version' || ae.kind === 'notfound')) setEmConflito(true);
+      setErroServidor(ae.message);
       setSalvando(false);
     }
   }
+
+  const atual = emConflito && base ? (escopos.find((x) => x.id === base.id) ?? null) : undefined;
+  const conflito: ConflitoInfo | null = emConflito && base ? {
+    baseVersao: base.versao,
+    atual,
+    diffs: atual ? diferencas([['Nome', nome, atual.nome], ['Descrição', descricao, atual.descricao ?? '']]) : [],
+    onReaplicar: () => { if (atual) { setBase(atual); setEmConflito(false); setErroServidor(null); } },
+  } : null;
+
   return (
-    <Dialog
-      open
-      title={editando ? 'Editar escopo' : 'Novo escopo'}
-      onClose={() => !salvando && onClose()}
-      actions={
-        <>
-          <button type="button" className="btn" onClick={onClose} disabled={salvando}>Cancelar</button>
-          <button type="button" className="btn btn-primary" onClick={() => void salvar()} disabled={salvando || validarNome(nome, escopos, editando?.id) !== null}>
-            {salvando ? 'Salvando…' : 'Salvar'}
-          </button>
-        </>
-      }
-    >
+    <EditDialog title={base ? 'Editar escopo' : 'Novo escopo'} onClose={onClose} onSave={() => void salvar()} dirty={instantaneo !== inicial}
+      saving={salvando} saveDisabled={validarNome(nome, escopos, base?.id) !== null} erro={erroServidor} conflito={conflito}>
       <FormField label="Nome" error={erroNome}>
         <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} autoFocus />
       </FormField>
       <FormField label="Descrição (opcional)">
         <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} maxLength={500} />
       </FormField>
-      {erroServidor && <p className="notice notice-error" role="alert">{erroServidor}</p>}
-    </Dialog>
+    </EditDialog>
   );
 }
 

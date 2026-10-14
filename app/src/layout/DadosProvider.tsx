@@ -4,6 +4,7 @@ import { carregarEscopo } from '../services/loader';
 import { toAppError, type AppError } from '../services/errors';
 import { useScope } from './ScopeProvider';
 import { registrarAcesso } from '../services/escrita';
+import { assinarEscopo, criarAgendador, type EstadoSync } from '../services/realtime';
 
 interface Estado {
   escopoId: string;
@@ -16,6 +17,10 @@ interface DadosState {
   loading: boolean;
   error: AppError | null;
   recarregar: () => void;
+  /** estado da conexão de sincronização em tempo real */
+  sync: EstadoSync;
+  /** aumenta a cada atualização recebida de outra sessão (formulários abertos usam para avisar) */
+  remotoVersao: number;
 }
 
 const Ctx = createContext<DadosState | null>(null);
@@ -26,28 +31,57 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const ativoId = ativo?.id ?? null;
   const [estado, setEstado] = useState<Estado | null>(null);
   const [tentativa, setTentativa] = useState(0);
+  const [sync, setSync] = useState<EstadoSync>('conectando');
+  const [remotoVersao, setRemotoVersao] = useState(0);
+  const [remotoPendente, setRemotoPendente] = useState(0);
 
   useEffect(() => {
     if (!ativoId) return;
     let viva = true;
     carregarEscopo(ativoId).then(
-      (dados) => viva && setEstado({ escopoId: ativoId, dados, error: null }),
-      (e: unknown) => viva && setEstado({ escopoId: ativoId, dados: null, error: toAppError(e) }),
+      (dados) => {
+        if (!viva) return;
+        setEstado({ escopoId: ativoId, dados, error: null });
+        setRemotoVersao(remotoPendente);
+      },
+      (e: unknown) => {
+        if (!viva) return;
+        // uma falha ao atualizar em segundo plano não apaga os dados já exibidos
+        setEstado((atual) => (atual && atual.escopoId === ativoId && atual.dados ? atual : { escopoId: ativoId, dados: null, error: toAppError(e) }));
+      },
     );
     return () => {
       viva = false;
     };
-  }, [ativoId, tentativa]);
+  }, [ativoId, tentativa]); // eslint-disable-line react-hooks/exhaustive-deps -- remotoPendente só é lido ao concluir a carga
 
   useEffect(() => {
     if (ativoId) void registrarAcesso(ativoId);
   }, [ativoId]);
 
+  // Realtime: mudanças vindas de fora disparam recarga em segundo plano (agrupada); as próprias gravações também chegam aqui, o que é inofensivo.
+  useEffect(() => {
+    if (!ativoId) return;
+    const ag = criarAgendador(() => {
+      setRemotoPendente((n) => n + 1);
+      setTentativa((n) => n + 1);
+    }, 400);
+    const parar = assinarEscopo(ativoId, {
+      onMudanca: () => ag.agendar(),
+      onEstado: setSync,
+      onReconectou: () => ag.agendar(), // eventos podem ter sido perdidos durante a queda
+    });
+    return () => {
+      ag.cancelar();
+      parar();
+    };
+  }, [ativoId]);
+
   const recarregar = useCallback(() => setTentativa((n) => n + 1), []);
   const doEscopo = estado && estado.escopoId === ativoId ? estado : null;
   const value = useMemo<DadosState>(
-    () => ({ dados: doEscopo?.dados ?? null, loading: ativoId !== null && doEscopo === null, error: doEscopo?.error ?? null, recarregar }),
-    [doEscopo, ativoId, recarregar],
+    () => ({ dados: doEscopo?.dados ?? null, loading: ativoId !== null && doEscopo === null, error: doEscopo?.error ?? null, recarregar, sync, remotoVersao }),
+    [doEscopo, ativoId, recarregar, sync, remotoVersao],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

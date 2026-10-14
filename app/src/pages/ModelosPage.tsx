@@ -3,12 +3,12 @@ import type { DadosEscopo, Modelo } from '../domain/types';
 import { impactoRemoverItemDoModelo, produtosDoModelo } from '../domain/dependencias';
 import { conflitosAoAcrescentarNoModelo } from '../domain/inheritance';
 import { validarNome } from '../domain/names';
-import { desfazerEnvios, erroDoValor, estadoInicial, montarValores, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
+import { desfazerEnvios, erroDoValor, estadoInicial, instantaneoEstado, montarValores, resumoEstado, resumoSalvo, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
 import { excluirModelo, salvarModelo } from '../services/escrita';
 import { toAppError } from '../services/errors';
 import { Carga } from '../ui/Carga';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Dialog } from '../ui/Dialog';
+import { diferencas, EditDialog, type ConflitoInfo } from '../ui/EditDialog';
 import { FormField } from '../ui/FormField';
 import { useToasts } from '../ui/Toasts';
 
@@ -16,19 +16,24 @@ interface Edicao { modelo: Modelo | null; copiaDe: Modelo | null }
 
 function FormModelo({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: Edicao; onClose: () => void; onSaved: () => void }) {
   const origem = edicao.modelo ?? edicao.copiaDe;
-  const valoresOrigem = origem ? d.modeloValores.filter((v) => v.modelo_id === origem.id).map((v) => ({ item_id: v.item_modelo_id, ...v })) : [];
+  const valoresDe = (m: Modelo | null) => (m ? d.modeloValores.filter((v) => v.modelo_id === m.id).map((v) => ({ item_id: v.item_modelo_id, ...v })) : []);
+  const valoresOrigem = valoresDe(origem);
+  const [base, setBase] = useState(edicao.modelo);
   const [nome, setNome] = useState(edicao.copiaDe ? `${edicao.copiaDe.nome} (cópia)` : (edicao.modelo?.nome ?? ''));
   const [descricao, setDescricao] = useState(origem?.descricao ?? '');
   const [estado, setEstado] = useState<EstadoValores>(() => estadoInicial(d.itensModelo, valoresOrigem));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [emConflito, setEmConflito] = useState(false);
   const [impacto, setImpacto] = useState<{ itens: string[]; produtos: string[]; analises: string[] } | null>(null);
+  const instantaneo = JSON.stringify([nome, descricao, instantaneoEstado(estado)]);
+  const [inicial] = useState(instantaneo);
 
-  const erroNome = nome === '' && !edicao.modelo ? null : validarNome(nome, d.modelos, edicao.modelo?.id);
+  const erroNome = nome === '' && !base ? null : validarNome(nome, d.modelos, base?.id);
   const errosValores = d.itensModelo.filter((i) => erroDoValor(i, estado[i.id]!) !== null);
-  const invalido = validarNome(nome, d.modelos, edicao.modelo?.id) !== null || errosValores.length > 0;
+  const invalido = validarNome(nome, d.modelos, base?.id) !== null || errosValores.length > 0;
 
-  const idsOriginais = new Set(edicao.modelo ? valoresOrigem.map((v) => v.item_id) : []);
+  const idsOriginais = new Set(base ? valoresDe(edicao.modelo).map((v) => v.item_id) : []);
   const idsAtuais = d.itensModelo.filter((i) => estado[i.id]?.incluido).map((i) => i.id);
   const removidos = [...idsOriginais].filter((id) => !idsAtuais.includes(id));
   const acrescentados = idsAtuais.filter((id) => !idsOriginais.has(id));
@@ -36,24 +41,25 @@ function FormModelo({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: E
   async function gravar() {
     setSalvando(true);
     setErro(null);
-    const itens = d.itensModelo;
     let enviadas: Awaited<ReturnType<typeof montarValores>>['enviadas'] = [];
     try {
-      const m = await montarValores(d.escopo.id, itens, estado);
+      const m = await montarValores(d.escopo.id, d.itensModelo, estado);
       enviadas = m.enviadas;
-      await salvarModelo({ escopoId: d.escopo.id, id: edicao.modelo?.id ?? null, versao: edicao.modelo?.versao ?? null, nome, descricao: descricao.trim() || null, valores: m.valores });
+      await salvarModelo({ escopoId: d.escopo.id, id: base?.id ?? null, versao: base?.versao ?? null, nome, descricao: descricao.trim() || null, valores: m.valores });
       onSaved();
     } catch (e) {
       await desfazerEnvios(enviadas);
-      setErro(toAppError(e).message);
+      const ae = toAppError(e);
+      if (base && (ae.kind === 'version' || ae.kind === 'notfound')) setEmConflito(true);
+      setErro(ae.message);
       setSalvando(false);
     }
   }
 
   function tentarSalvar() {
     if (invalido) return;
-    if (edicao.modelo) {
-      const conf = conflitosAoAcrescentarNoModelo(d, edicao.modelo.id, acrescentados);
+    if (base) {
+      const conf = conflitosAoAcrescentarNoModelo(d, base.id, acrescentados);
       if (conf.length > 0) {
         setErro(`Não é possível acrescentar estes itens: ${[...new Set(conf.map((c) => c.nome))].join(', ')} já existe como item próprio de produtos deste modelo.`);
         return;
@@ -61,7 +67,7 @@ function FormModelo({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: E
       const produtos = new Map<string, string>();
       const analises = new Map<string, string>();
       for (const id of removidos) {
-        const imp = impactoRemoverItemDoModelo(d, edicao.modelo.id, id);
+        const imp = impactoRemoverItemDoModelo(d, base.id, id);
         imp.produtos.forEach((p) => produtos.set(p.id, p.nome));
         imp.analises.forEach((a) => analises.set(a.tipo + a.id, `${a.tipo}: ${a.nome}`));
       }
@@ -73,20 +79,26 @@ function FormModelo({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: E
     void gravar();
   }
 
+  const atual = emConflito && base ? (d.modelos.find((m) => m.id === base.id) ?? null) : undefined;
+  const conflito: ConflitoInfo | null = emConflito && base ? {
+    baseVersao: base.versao,
+    atual,
+    diffs: atual ? diferencas([
+      ['Nome', nome, atual.nome], ['Descrição', descricao, atual.descricao ?? ''],
+      ['Itens e valores', resumoEstado(d.itensModelo, estado), resumoSalvo(d.itensModelo, valoresDe(atual))],
+    ]) : [],
+    onReaplicar: () => { if (atual) { setBase(atual); setEmConflito(false); setErro(null); } },
+  } : null;
+
   return (
     <>
-      <Dialog open title={edicao.modelo ? 'Editar modelo' : 'Novo modelo'} onClose={() => !salvando && onClose()}
-        actions={<>
-          <button type="button" className="btn" onClick={onClose} disabled={salvando}>Cancelar</button>
-          <button type="button" className="btn btn-primary" onClick={tentarSalvar} disabled={salvando || invalido}>{salvando ? 'Salvando…' : 'Salvar'}</button>
-        </>}>
+      <EditDialog title={base ? 'Editar modelo' : 'Novo modelo'} onClose={onClose} onSave={tentarSalvar} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
         <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
         <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
         <h3>Itens do modelo</h3>
         <p className="muted">Marque os itens que este modelo possui e informe os valores.</p>
         <ValoresEditor d={d} itens={d.itensModelo} estado={estado} onChange={setEstado} selecionavel desabilitar={salvando} />
-        {erro && <p className="notice notice-error" role="alert">{erro}</p>}
-      </Dialog>
+      </EditDialog>
       <ConfirmDialog open={impacto !== null} title="Remover itens do modelo" danger confirmLabel="Remover e salvar" busy={salvando}
         onCancel={() => setImpacto(null)} onConfirm={() => { setImpacto(null); void gravar(); }}>
         <p>Você está removendo do modelo: <strong>{impacto?.itens.join(', ')}</strong>.</p>

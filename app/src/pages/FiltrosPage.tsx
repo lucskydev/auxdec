@@ -7,7 +7,7 @@ import { excluirFiltro, salvarFiltro, type CondicaoEntrada } from '../services/e
 import { toAppError } from '../services/errors';
 import { Carga } from '../ui/Carga';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Dialog } from '../ui/Dialog';
+import { diferencas, EditDialog, type ConflitoInfo } from '../ui/EditDialog';
 import { FormField } from '../ui/FormField';
 import { useToasts } from '../ui/Toasts';
 
@@ -26,6 +26,8 @@ function opcoes(d: DadosEscopo) {
 
 function FormFiltro({ d, filtro, onClose, onSaved }: { d: DadosEscopo; filtro: Filtro | null; onClose: () => void; onSaved: () => void }) {
   const ops = opcoes(d);
+  const [base0, setBase] = useState(filtro);
+  const [emConflito, setEmConflito] = useState(false);
   const [nome, setNome] = useState(filtro?.nome ?? '');
   const [descricao, setDescricao] = useState(filtro?.descricao ?? '');
   const [logica, setLogica] = useState<Logica>(filtro?.logica ?? 'AND');
@@ -39,7 +41,7 @@ function FormFiltro({ d, filtro, onClose, onSaved }: { d: DadosEscopo; filtro: F
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const erroNome = nome === '' && !filtro ? null : validarNome(nome, d.filtros, filtro?.id);
+  const erroNome = nome === '' && !base0 ? null : validarNome(nome, d.filtros, base0?.id);
   const erros: string[] = [];
   const entradas: CondicaoEntrada[] = [];
   if (conds.length === 0) erros.push('Inclua ao menos uma condição.');
@@ -58,7 +60,7 @@ function FormFiltro({ d, filtro, onClose, onSaved }: { d: DadosEscopo; filtro: F
       else entradas.push({ ...base, valor_num: n.valor });
     }
   });
-  const invalido = validarNome(nome, d.filtros, filtro?.id) !== null || erros.length > 0;
+  const invalido = validarNome(nome, d.filtros, base0?.id) !== null || erros.length > 0;
   const upd = (chave: number, p: Partial<CondForm>) => setConds((l) => l.map((c) => (c.chave === chave ? { ...c, ...p } : c)));
 
   async function salvar() {
@@ -66,20 +68,37 @@ function FormFiltro({ d, filtro, onClose, onSaved }: { d: DadosEscopo; filtro: F
     setSalvando(true);
     setErro(null);
     try {
-      await salvarFiltro({ escopoId: d.escopo.id, id: filtro?.id ?? null, versao: filtro?.versao ?? null, nome, descricao: descricao.trim() || null, logica, condicoes: entradas });
+      await salvarFiltro({ escopoId: d.escopo.id, id: base0?.id ?? null, versao: base0?.versao ?? null, nome, descricao: descricao.trim() || null, logica, condicoes: entradas });
       onSaved();
     } catch (e) {
-      setErro(toAppError(e).message);
+      const ae = toAppError(e);
+      if (base0 && (ae.kind === 'version' || ae.kind === 'notfound')) setEmConflito(true);
+      setErro(ae.message);
       setSalvando(false);
     }
   }
 
+  const resumoConds = (l: { ref: string; op: Operador; valor: string }[]) => l.map((c) => `${c.ref}|${c.op}|${c.valor.trim()}`).join('\n');
+  const instantaneo = JSON.stringify([nome, descricao, logica, resumoConds(conds)]);
+  const [inicial] = useState(instantaneo);
+  const atual = emConflito && base0 ? (d.filtros.find((f) => f.id === base0.id) ?? null) : undefined;
+  const condsAtuais = atual
+    ? d.filtroCondicoes.filter((c) => c.filtro_id === atual.id).sort((a, b) => a.ordem - b.ordem).map((c) => ({
+      ref: c.item_modelo_id ? `m:${c.item_modelo_id}` : c.item_produto_id ? `p:${c.item_produto_id}` : `a:${c.item_analise_id}`,
+      op: c.operador, valor: (c.valor_txt ?? numeroParaTexto(c.valor_num)).trim(),
+    })) : [];
+  const conflito: ConflitoInfo | null = emConflito && base0 ? {
+    baseVersao: base0.versao,
+    atual,
+    diffs: atual ? diferencas([
+      ['Nome', nome, atual.nome], ['Descrição', descricao, atual.descricao ?? ''], ['Lógica', logica, atual.logica],
+      ['Condições', resumoConds(conds), resumoConds(condsAtuais)],
+    ]) : [],
+    onReaplicar: () => { if (atual) { setBase(atual); setEmConflito(false); setErro(null); } },
+  } : null;
+
   return (
-    <Dialog open title={filtro ? 'Editar filtro' : 'Novo filtro'} onClose={() => !salvando && onClose()}
-      actions={<>
-        <button type="button" className="btn" onClick={onClose} disabled={salvando}>Cancelar</button>
-        <button type="button" className="btn btn-primary" onClick={() => void salvar()} disabled={salvando || invalido}>{salvando ? 'Salvando…' : 'Salvar'}</button>
-      </>}>
+    <EditDialog title={base0 ? 'Editar filtro' : 'Novo filtro'} onClose={onClose} onSave={() => void salvar()} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
       <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
       <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
       <FormField label="Combinar condições com">
@@ -112,8 +131,7 @@ function FormFiltro({ d, filtro, onClose, onSaved }: { d: DadosEscopo; filtro: F
       })}
       <p><button type="button" className="btn" onClick={() => setConds((l) => [...l, { chave: seq++, ref: '', op: 'eq', valor: '' }])}>Adicionar condição</button></p>
       {erros.length > 0 && <ul className="field-error" role="alert">{erros.map((e) => <li key={e}>{e}</li>)}</ul>}
-      {erro && <p className="notice notice-error" role="alert">{erro}</p>}
-    </Dialog>
+    </EditDialog>
   );
 }
 

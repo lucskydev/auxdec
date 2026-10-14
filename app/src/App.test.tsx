@@ -12,7 +12,12 @@ const auth = {
 };
 const order = vi.fn();
 const from = vi.fn(() => ({ select: () => ({ order }) }));
-vi.mock('./lib/supabase', () => ({ getSupabase: () => ({ auth, from }) }));
+const canal = { on: vi.fn(), subscribe: vi.fn() };
+canal.on.mockReturnValue(canal);
+canal.subscribe.mockReturnValue(canal);
+const channel = vi.fn(() => canal);
+const removeChannel = vi.fn();
+vi.mock('./lib/supabase', () => ({ getSupabase: () => ({ auth, from, channel, removeChannel }) }));
 
 import { routes } from './App';
 
@@ -27,6 +32,9 @@ function abrir(path: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  canal.on.mockReturnValue(canal);
+  canal.subscribe.mockReturnValue(canal);
+  channel.mockReturnValue(canal);
   window.localStorage.clear();
   auth.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
   auth.getSession.mockResolvedValue({ data: { session: null } });

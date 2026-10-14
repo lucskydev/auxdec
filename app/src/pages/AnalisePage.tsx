@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useDados } from '../layout/DadosProvider';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { ConfigAnalise, DadosEscopo, Logica, ModoAnalise, OrdenacaoItem } from '../domain/types';
 import { COL_NOME, COL_RANKING, colunasVisiveis, construirTabela, todasColunas, type CelulaVista, type Coluna } from '../domain/analysis/tabela';
@@ -94,6 +95,7 @@ function Celula({ c, d, onTexto, onImagem }: { c: CelulaVista; d: DadosEscopo; o
 }
 
 function Analise({ d }: { d: DadosEscopo }) {
+  const { recarregar } = useDados();
   const { notify } = useToasts();
   const [local, setLocal] = useState<ConfigAnalise | null>(null);
   const cfg = local && local.versao >= d.config.versao ? local : d.config;
@@ -118,7 +120,11 @@ function Analise({ d }: { d: DadosEscopo }) {
         ultima.current = salvo;
         setLocal(salvo);
       } catch (e) {
-        notify('error', `Não foi possível salvar a configuração: ${toAppError(e).message}`);
+        const ae = toAppError(e);
+        if (ae.kind === 'version') {
+          notify('warning', 'A configuração foi alterada em outro lugar. Mostrando a versão mais recente; refaça a alteração se ainda quiser.');
+          void recarregar();
+        } else notify('error', `Não foi possível salvar a configuração: ${ae.message}`);
         setLocal(null);
       }
     });

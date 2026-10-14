@@ -137,3 +137,22 @@ export function ValoresEditor({ d, itens, estado, onChange, selecionavel, desabi
     </div>
   );
 }
+
+const textoDoValor = (i: Item, v: { texto: string; imgId: string | null; nova?: boolean }) =>
+  i.tipo === 'imagem' ? (v.nova ? '(nova imagem)' : v.imgId ? '(imagem)' : '') : v.texto.trim();
+
+/** Resumo legível do que o usuário está editando (para comparar com o salvo em caso de conflito). */
+export function resumoEstado(itens: Item[], estado: EstadoValores): string {
+  return itens.filter((i) => estado[i.id]?.incluido).map((i) => `${i.nome}: ${textoDoValor(i, { ...estado[i.id]!, nova: estado[i.id]!.nova !== null }) || '—'}`).join('\n');
+}
+
+/** Mesmo resumo, a partir dos valores gravados. */
+export function resumoSalvo(itens: Item[], valores: { item_id: string; valor_num: number | null; valor_txt: string | null; valor_img_id: string | null }[]): string {
+  const e = estadoInicial(itens, valores);
+  return resumoEstado(itens, e);
+}
+
+/** Parte do estado que importa para saber se há alterações não salvas (ignora blobs de pré-visualização). */
+export function instantaneoEstado(estado: EstadoValores): string {
+  return JSON.stringify(Object.entries(estado).map(([k, v]) => [k, v.incluido, v.texto, v.imgId, v.nova !== null]));
+}
