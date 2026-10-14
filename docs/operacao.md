@@ -29,4 +29,4 @@ Abrir a URL, entrar com o login real, criar um escopo de teste, editar, exportar
 - Migração 0006 (importação) pode ainda não estar aplicada: sem ela "Importar backup" falha.
 - Sem verificação visual em navegador real/dispositivos móveis.
 - Bundle principal ~700 kB (sem code-splitting por rota).
-- Workflows do GitHub Actions escritos mas ainda não executados.
+- Workflows executados com sucesso em 2026-10-14; a página publicada carrega, mas o login real e os fluxos nela ainda não foram validados.
