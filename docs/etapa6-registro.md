@@ -18,8 +18,14 @@ Em https://lucskydev.github.io/auxdec/ : login real funcionou; criou escopo "Ve�
 - Migração 0006 já estava aplicada no Supabase: conferida por catálogo (SECURITY DEFINER, execute só para authenticated/service_role/postgres; md5 do corpo igual ao arquivo local, diferindo apenas por quebras de linha CRLF).
 - Luc relatou que "tudo certo nos testes" da análise, exportações, backup (botão avulso adicionado após ele não encontrá-lo) e importação (relato dele, sem detalhe por cenário).
 
+## Duas abas (Luc, 2026-10-14)
+Luc testou duas abas (conflito/tempo real) e relatou que funcionou. Criou um segundo usuário no Supabase para os testes de integração.
+
+## Testes de integração (escritos, ainda não executados)
+`app/integration/` (17 testes) + workflow manual `integration.yml`; ver `docs/operacao.md`. Compilam, passam em tsc/eslint e ficam "skipped" sem credenciais. Falta executá-los com os usuários de teste.
+
 ## Ainda NÃO feito (obrigatório antes de concluir a etapa)
-- Testes de integração contra Supabase real (RLS entre usuários, Storage, concorrência/V2001, Realtime). Exigem 2 usuários de teste e acesso à rede; não criar usuários sem autorização do Luc.
+- EXECUTAR os testes de integração contra o Supabase real (escritos; precisam das credenciais dos 2 usuários de teste, que só o Luc possui).
 - Fluxos completos restantes com dados reais de teste (Luc; login já validado).
 - Testes de interface ainda sem cobertura dedicada: produtos, itens de análise (fórmula/agregado), tela de análise (filtros/ordenação/colunas), importação.
 - Verificação em navegador real/dispositivos (responsividade).

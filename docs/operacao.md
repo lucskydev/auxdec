@@ -5,6 +5,15 @@ Em todo push na `main` e em pull requests:
 - **app**: `npm ci`, typecheck, eslint, vitest, `npm audit --omit=dev --audit-level=high`, build (com valores fictícios).
 - **banco**: sobe PGlite, aplica as migrações 0001–0006 e roda os testes SQL (exige psql 0 de saída, nenhum `FAIL` e ≥270 asserções `ok`).
 
+## Testes de integração contra o Supabase real (`app/integration/`)
+17 testes: RLS (usuário B não lê/altera/exclui/cria no escopo do A, nem por RPC, nem sem login), integridade (V2001 versão, V2004 ciclo, V2010 agregado 2–5, V2014 confirmação, nome repetido, item em uso), Storage (bucket privado, isolamento por usuário) e Realtime (a 2ª sessão recebe o evento; o usuário B não recebe).
+Eles só rodam com variáveis de ambiente (sem elas ficam "skipped" e não afetam `npm test`):
+`INT_SUPABASE_URL`, `INT_SUPABASE_KEY` (publishable/anon), `INT_USER_A_EMAIL`, `INT_USER_A_PASSWORD`, `INT_USER_B_EMAIL`, `INT_USER_B_PASSWORD`.
+- Local: defina as variáveis no terminal (não grave em arquivo versionado) e rode `cd app && npm run test:integration`.
+- GitHub: crie os 6 como **Secrets** de repositório e rode Actions → "Integração (Supabase real)" → Run workflow.
+- Dados: tudo é criado num escopo temporário `ZZ_INT_…` do usuário A e excluído no final. Use um usuário de teste como A. O B só tenta acessar o que é do A e não grava nada próprio.
+- Estado: escritos em 2026-10-14; **nunca executados** (o ambiente de desenvolvimento não alcança o Supabase). A primeira execução pode revelar ajustes nos próprios testes.
+
 ## Publicação (`.github/workflows/deploy.yml`)
 Push na `main` (ou execução manual) roda typecheck, lint e testes, compila e publica `app/dist` no GitHub Pages em `https://lucskydev.github.io/auxdec/`.
 

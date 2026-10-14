@@ -1,0 +1,33 @@
+name: Integração (Supabase real)
+
+# Execução MANUAL. Cria um escopo temporário "ZZ_INT_…" no usuário A e o exclui no final.
+# Requer os Secrets de repositório: INT_SUPABASE_URL, INT_SUPABASE_KEY (publishable/anon, nunca service_role),
+# INT_USER_A_EMAIL, INT_USER_A_PASSWORD, INT_USER_B_EMAIL, INT_USER_B_PASSWORD (usuários de TESTE).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integracao:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run test:integration
+        env:
+          INT_SUPABASE_URL: ${{ secrets.INT_SUPABASE_URL }}
+          INT_SUPABASE_KEY: ${{ secrets.INT_SUPABASE_KEY }}
+          INT_USER_A_EMAIL: ${{ secrets.INT_USER_A_EMAIL }}
+          INT_USER_A_PASSWORD: ${{ secrets.INT_USER_A_PASSWORD }}
+          INT_USER_B_EMAIL: ${{ secrets.INT_USER_B_EMAIL }}
+          INT_USER_B_PASSWORD: ${{ secrets.INT_USER_B_PASSWORD }}
