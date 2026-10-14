@@ -4,7 +4,7 @@ Executado em 2026-10-13 (sandbox; Supabase real inacessível daqui).
 
 | Verificação | Resultado |
 |---|---|
-| Testes de app (vitest) | 191 passam (18 arquivos); tsc e eslint limpos |
+| Testes de app (vitest) | 204 passam (20 arquivos); tsc e eslint limpos. Inclui testes de interface com Supabase simulado para: conflito de versão (preserva edição, compara, reaplica sobre a versão nova), registro excluído por outra sessão, falha de rede, cancelar com alterações, impacto ao remover item de modelo, limites de valor, filtros e backup avulso |
 | Testes de banco (PGlite PG18 + stub, 8 arquivos) | 270 asserções `ok`; migrações 0001–0006 aplicam; objetos sem prefixo v2_ inalterados |
 | Build de produção | ok; bundle principal 602 kB (179 kB gzip) após code-splitting por rota (era 697 kB); o restante é React + Supabase + router, o aviso de chunk >500 kB permanece |
 | `npm audit --omit=dev` | 0 vulnerabilidades |
@@ -21,7 +21,7 @@ Em https://lucskydev.github.io/auxdec/ : login real funcionou; criou escopo "Ve�
 ## Ainda NÃO feito (obrigatório antes de concluir a etapa)
 - Testes de integração contra Supabase real (RLS entre usuários, Storage, concorrência/V2001, Realtime). Exigem 2 usuários de teste e acesso à rede; não criar usuários sem autorização do Luc.
 - Fluxos completos restantes com dados reais de teste (Luc; login já validado).
-- Testes de interface dos demais fluxos (itens, modelos, produtos, filtros, análise).
+- Testes de interface ainda sem cobertura dedicada: produtos, itens de análise (fórmula/agregado), tela de análise (filtros/ordenação/colunas), importação.
 - Verificação em navegador real/dispositivos (responsividade).
 - Banco local é PG18; produção é PG17 (diferença não exercitada).
 
