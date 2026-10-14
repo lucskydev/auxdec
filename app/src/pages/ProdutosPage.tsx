@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { DadosEscopo, Produto } from '../domain/types';
 import { conflitosDeNomes } from '../domain/inheritance';
 import { validarNome } from '../domain/names';
-import { desfazerEnvios, erroDoValor, estadoInicial, instantaneoEstado, montarValores, resumoEstado, resumoSalvo, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
+import { desfazerEnvios, erroDoValor, limparImagensSoltas, estadoInicial, instantaneoEstado, montarValores, resumoEstado, resumoSalvo, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
 import { formatarNumero } from '../features/numeros';
 import { excluirProduto, salvarProduto } from '../services/escrita';
 import { toAppError } from '../services/errors';
@@ -46,6 +46,7 @@ function FormProduto({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: 
       const m = await montarValores(d.escopo.id, d.itensProduto, estado);
       enviadas = m.enviadas;
       await salvarProduto({ escopoId: d.escopo.id, id: base?.id ?? null, versao: base?.versao ?? null, nome, descricao: descricao.trim() || null, modeloId: modeloId || null, valores: m.valores });
+      if (base) await limparImagensSoltas(d, valoresDe(base).map((v) => v.valor_img_id), m.valores);
       onSaved();
     } catch (e) {
       await desfazerEnvios(enviadas);

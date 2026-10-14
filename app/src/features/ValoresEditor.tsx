@@ -69,6 +69,23 @@ export async function desfazerEnvios(imgs: Imagem[]) {
   }
 }
 
+/**
+ * R7: depois de um salvamento bem-sucedido, remove imagens que deixaram de ser usadas por este registro.
+ * O banco recusa excluir imagem ainda referenciada (ex.: compartilhada por duplicação), então a falha é esperada e ignorada.
+ * Devolve quantas ficaram para trás (só informativo).
+ */
+export async function limparImagensSoltas(d: DadosEscopo, idsAntes: (string | null)[], valoresDepois: ValorEntrada[]): Promise<number> {
+  const depois = new Set(valoresDepois.map((v) => v.valor_img_id).filter((x): x is string => !!x));
+  const soltas = [...new Set(idsAntes.filter((x): x is string => !!x))].filter((id) => !depois.has(id));
+  let restaram = 0;
+  for (const id of soltas) {
+    const img = d.imagens.find((i) => i.id === id);
+    if (!img) continue;
+    try { await excluirImagem(img); } catch { restaram++; }
+  }
+  return restaram;
+}
+
 interface Props {
   d: DadosEscopo;
   itens: Item[];

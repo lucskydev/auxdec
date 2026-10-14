@@ -3,7 +3,7 @@ import type { DadosEscopo, Modelo } from '../domain/types';
 import { impactoRemoverItemDoModelo, produtosDoModelo } from '../domain/dependencias';
 import { conflitosAoAcrescentarNoModelo } from '../domain/inheritance';
 import { validarNome } from '../domain/names';
-import { desfazerEnvios, erroDoValor, estadoInicial, instantaneoEstado, montarValores, resumoEstado, resumoSalvo, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
+import { desfazerEnvios, erroDoValor, limparImagensSoltas, estadoInicial, instantaneoEstado, montarValores, resumoEstado, resumoSalvo, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
 import { excluirModelo, salvarModelo } from '../services/escrita';
 import { toAppError } from '../services/errors';
 import { Carga } from '../ui/Carga';
@@ -46,6 +46,7 @@ function FormModelo({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: E
       const m = await montarValores(d.escopo.id, d.itensModelo, estado);
       enviadas = m.enviadas;
       await salvarModelo({ escopoId: d.escopo.id, id: base?.id ?? null, versao: base?.versao ?? null, nome, descricao: descricao.trim() || null, valores: m.valores });
+      if (base) await limparImagensSoltas(d, valoresDe(edicao.modelo).map((v) => v.valor_img_id), m.valores);
       onSaved();
     } catch (e) {
       await desfazerEnvios(enviadas);

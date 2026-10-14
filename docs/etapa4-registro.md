@@ -18,7 +18,7 @@ Atualizado: 2026-10-13. Código em `app/src/`. Resultado atual: tsc, eslint e 17
 | Filtros | feito (UI sem teste de UI) | `pages/FiltrosPage.tsx` |
 | Tela de análise (virtualizada, CSV, PDF, miniaturas, config persistida) | feito (UI sem teste de UI) | `pages/AnalisePage.tsx` |
 | Importação de backup: RPC `v2_importar_escopo` (migração 0006) + serviço + diálogo (novo/substituir, backup do escopo alvo antes de substituir) | **escrito e testado localmente (42 asserções em `supabase/tests/08_importacao.sql`). 0006 AINDA NÃO APLICADA no Supabase** — aguarda confirmação do Luc. Sem ela o botão "Importar backup" falha com erro de função inexistente | `supabase/migrations/…0006…`, `services/importacao.ts`, `pages/ImportarBackup.tsx` |
-| Limpeza de imagens órfãs (R7) | pendente | — |
+| Limpeza de imagens órfãs (R7) | feito: após salvar modelo/produto, imagens que deixaram de ser usadas são excluídas (`limparImagensSoltas`; o banco recusa se ainda referenciadas). 3 testes | `features/ValoresEditor.tsx` |
 | Testes de UI (fluxos), integração (RLS/storage/concorrência) | pendente | — |
 
 ## Interpretações adotadas (confirmar com o Luc se discordar)
@@ -27,7 +27,7 @@ Atualizado: 2026-10-13. Código em `app/src/`. Resultado atual: tsc, eslint e 17
 - Filtros ativos são por sessão do navegador (localStorage `filtrosAtivos:<escopo>`); modo, lógica global, ranking, colunas e ordenação são persistidos em `v2_config_analise`.
 - Exportação CSV: números crus (ponto decimal); indisponível = `INDISPONÍVEL`, erro = `ERRO`, imagem = `[imagem]`.
 - Duplicar modelo/produto reutiliza as mesmas imagens (mesmo `valor_img_id`).
-- Aviso: ao substituir/remover imagem de um valor, o arquivo antigo fica órfão até a limpeza R7.
+- Ao substituir/remover imagem de um valor, o arquivo antigo é excluído após o salvamento (R7). Falha na limpeza não impede o salvamento; o arquivo fica órfão. Itens de análise e exclusão de item não têm imagens.
 
 ## Nota sobre os testes de banco
 As RPCs terminam com `set constraints all immediate`; por isso `t.popular` (06) chama `set constraints all deferred` antes de cada RPC, já que ali várias RPCs dividem uma transação. Em uso real cada RPC é uma transação própria.

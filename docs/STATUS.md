@@ -18,8 +18,9 @@ Atualizado: 2026-10-13 (Etapa 4 quase completa; falta importação de backup/mig
 | 2 Modelagem e segurança | Concluída. 5 migrações aplicadas e conferidas por catálogo. 228 testes locais passam (PG18 + stub). Pendências em `etapa2-registro.md` §10 |
 | 3 Estrutura da aplicação | Concluída no código (tipos, lint, 33 testes, build ok). **Login real ainda não validado** |
 | 4 Funcionalidades de domínio | **Em andamento** — telas e motor prontos (172 testes); migração 0006 (importação) escrita e testada localmente mas NÃO aplicada; faltam limpeza R7 e testes de UI. Ver `docs/etapa4-registro.md` |
-| 5 Persistência e sincronização | Código pronto (188 testes de app; Supabase simulado). Realtime e conflitos não testados contra o serviço real. Ver `docs/etapa5-registro.md`. **Não enviada ao GitHub ainda** |
-| 6 a 7 | Não iniciadas |
+| 5 Persistência e sincronização | Código pronto e enviado ao GitHub (commit eb62f6a). Realtime e conflitos não testados contra o serviço real. Ver `docs/etapa5-registro.md` |
+| 6 Validação | **Parcial** (191 testes de app, 270 de banco, build, audit ok; faltam integração real, login real, UI dos demais fluxos). Ver `docs/etapa6-registro.md` |
+| 7 Publicação e documentação | Não iniciada |
 
 ## Decisões e combinados do Luc (não reabrir)
 - Repo novo `lucskydev/auxdec` (nada foi enviado ainda). Repo antigo `lucskydev/decisoes` intocável.
@@ -31,7 +32,7 @@ Atualizado: 2026-10-13 (Etapa 4 quase completa; falta importação de backup/mig
 - Redirect URL `https://lucskydev.github.io/auxdec/` já adicionada no Supabase Auth pelo Luc.
 
 ## Atenção: durabilidade
-O trabalho vive no contêiner da sessão (`/home/claude/auxdec`), que é temporário. Cópias dos documentos e das migrações foram salvas no Projeto "Sistema auxiliar de tomada de decisões" (claude.ai). Em 2026-10-13 o código foi enviado para `lucskydev/auxdec` (branch `main`, commit 47ab864). Alterações posteriores só estarão seguras depois de novo push.
+O trabalho vive no contêiner da sessão (`/home/claude/auxdec`), que é temporário. Cópias dos documentos e das migrações foram salvas no Projeto "Sistema auxiliar de tomada de decisões" (claude.ai). Em 2026-10-13 o código foi enviado para `lucskydev/auxdec` (branch `main`, commit 47ab864). Etapa 5 enviada em eb62f6a. Alterações posteriores (R7, Etapa 6) só estarão seguras depois de novo push.
 
 ## Como retomar
 1. Ler este arquivo e o registro da etapa em andamento.
