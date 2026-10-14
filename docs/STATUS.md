@@ -1,6 +1,6 @@
 # Auxdec v2 — STATUS (leia isto primeiro ao retomar)
 
-Atualizado: 2026-10-13 (Etapa 4 quase completa; falta importação de backup/migração 0006).
+Atualizado: 2026-10-14 (app publicado e validado manualmente pelo Luc; Etapas 4–5 completas no código; Etapa 6 parcial; Etapa 7 parcial).
 
 ## Onde está cada coisa
 | O quê | Onde |
@@ -17,10 +17,10 @@ Atualizado: 2026-10-13 (Etapa 4 quase completa; falta importação de backup/mig
 | 1 Levantamento e arquitetura | Concluída; modelo de dados aprovado pelo Luc (D1–D10) |
 | 2 Modelagem e segurança | Concluída. 5 migrações aplicadas e conferidas por catálogo. 228 testes locais passam (PG18 + stub). Pendências em `etapa2-registro.md` §10 |
 | 3 Estrutura da aplicação | Concluída no código (tipos, lint, 33 testes, build ok). Login real validado em 2026-10-14 |
-| 4 Funcionalidades de domínio | **Em andamento** — telas e motor prontos (172 testes); migração 0006 (importação) escrita e testada localmente mas NÃO aplicada; faltam limpeza R7 e testes de UI. Ver `docs/etapa4-registro.md` |
+| 4 Funcionalidades de domínio | Completa no código e validada manualmente pelo Luc (telas, motor, exportação CSV/PDF, backup avulso, importação com 0006 aplicada, limpeza de imagens R7). Faltam testes automatizados de UI de alguns fluxos. Ver `docs/etapa4-registro.md` |
 | 5 Persistência e sincronização | Código pronto e enviado ao GitHub (commit eb62f6a). Realtime e conflitos não testados contra o serviço real. Ver `docs/etapa5-registro.md` |
 | 6 Validação | **Parcial** (191 testes de app, 270 de banco, build, audit ok; faltam integração real, login real, UI dos demais fluxos). Ver `docs/etapa6-registro.md` |
-| 7 Publicação e documentação | **Parcial** — commit 65427e2 enviado; CI (app + banco) e Deploy executaram com sucesso no GitHub em 2026-10-14; página publicada responde em https://lucskydev.github.io/auxdec/ (título correto). Login real e criação de escopo/modelo/item validados pelo Luc na versão publicada (2026-10-14); itens, modelos, produtos e filtros também testados por ele (OK); faltam análise/ranking, exportação, backup, conflito entre duas sessões |
+| 7 Publicação e documentação | **Parcial** — commit 65427e2 enviado; CI (app + banco) e Deploy executaram com sucesso no GitHub em 2026-10-14; página publicada responde em https://lucskydev.github.io/auxdec/ (título correto). Login real e criação de escopo/modelo/item validados pelo Luc na versão publicada (2026-10-14); itens, modelos, produtos e filtros também testados por ele (OK); análise, exportação, backup e importação também validados por ele; falta conflito entre duas sessões/realtime entre abas e integração automatizada |
 
 ## Decisões e combinados do Luc (não reabrir)
 - Repo novo `lucskydev/auxdec` (nada foi enviado ainda). Repo antigo `lucskydev/decisoes` intocável.

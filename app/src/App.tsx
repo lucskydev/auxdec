@@ -8,12 +8,6 @@ import { ScopeProvider } from './layout/ScopeProvider';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { AnalisePage } from './pages/AnalisePage';
-import { FiltrosPage } from './pages/FiltrosPage';
-import { ItensAnalisePage } from './pages/ItensAnalisePage';
-import { ItensPage } from './pages/ItensPage';
-import { ModelosPage } from './pages/ModelosPage';
-import { ProdutosPage } from './pages/ProdutosPage';
 import { ToastProvider } from './ui/Toasts';
 import { UnsavedChangesProvider } from './ui/UnsavedChanges';
 
@@ -52,13 +46,14 @@ export const routes = [
             element: <ScopedShell />,
             children: [
               { path: '/', element: <DashboardPage /> },
-              { path: '/analise', element: <AnalisePage /> },
-              { path: '/produtos', element: <ProdutosPage /> },
-              { path: '/modelos', element: <ModelosPage /> },
-              { path: '/itens-modelo', element: <ItensPage tabela="v2_itens_modelo" /> },
-              { path: '/itens-produto', element: <ItensPage tabela="v2_itens_produto" /> },
-              { path: '/itens-analise', element: <ItensAnalisePage /> },
-              { path: '/filtros', element: <FiltrosPage /> },
+              // Páginas pesadas são carregadas sob demanda (code-splitting por rota).
+              { path: '/analise', lazy: async () => ({ Component: (await import('./pages/AnalisePage')).AnalisePage }) },
+              { path: '/produtos', lazy: async () => ({ Component: (await import('./pages/ProdutosPage')).ProdutosPage }) },
+              { path: '/modelos', lazy: async () => ({ Component: (await import('./pages/ModelosPage')).ModelosPage }) },
+              { path: '/itens-modelo', lazy: async () => { const { ItensPage } = await import('./pages/ItensPage'); return { Component: () => <ItensPage tabela="v2_itens_modelo" /> }; } },
+              { path: '/itens-produto', lazy: async () => { const { ItensPage } = await import('./pages/ItensPage'); return { Component: () => <ItensPage tabela="v2_itens_produto" /> }; } },
+              { path: '/itens-analise', lazy: async () => ({ Component: (await import('./pages/ItensAnalisePage')).ItensAnalisePage }) },
+              { path: '/filtros', lazy: async () => ({ Component: (await import('./pages/FiltrosPage')).FiltrosPage }) },
               { path: '*', element: <NotFoundPage /> },
             ],
           },

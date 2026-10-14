@@ -17,7 +17,7 @@ Atualizado: 2026-10-13. Código em `app/src/`. Resultado atual: tsc, eslint e 17
 | Itens de análise (editor de fórmula e agregado 2–5) | feito (UI sem teste de UI) | `pages/ItensAnalisePage.tsx` |
 | Filtros | feito (UI sem teste de UI) | `pages/FiltrosPage.tsx` |
 | Tela de análise (virtualizada, CSV, PDF, miniaturas, config persistida) | feito (UI sem teste de UI) | `pages/AnalisePage.tsx` |
-| Importação de backup: RPC `v2_importar_escopo` (migração 0006) + serviço + diálogo (novo/substituir, backup do escopo alvo antes de substituir) | **escrito e testado localmente (42 asserções em `supabase/tests/08_importacao.sql`). 0006 AINDA NÃO APLICADA no Supabase** — aguarda confirmação do Luc. Sem ela o botão "Importar backup" falha com erro de função inexistente | `supabase/migrations/…0006…`, `services/importacao.ts`, `pages/ImportarBackup.tsx` |
+| Importação de backup: RPC `v2_importar_escopo` (migração 0006) + serviço + diálogo (novo/substituir, backup do escopo alvo antes de substituir) | **escrito, testado localmente (`supabase/tests/08_importacao.sql`) e APLICADO no Supabase (conferido 2026-10-14); importação testada manualmente pelo Luc** | `supabase/migrations/…0006…`, `services/importacao.ts`, `pages/ImportarBackup.tsx` |
 | Limpeza de imagens órfãs (R7) | feito: após salvar modelo/produto, imagens que deixaram de ser usadas são excluídas (`limparImagensSoltas`; o banco recusa se ainda referenciadas). 3 testes | `features/ValoresEditor.tsx` |
 | Testes de UI (fluxos), integração (RLS/storage/concorrência) | pendente | — |
 

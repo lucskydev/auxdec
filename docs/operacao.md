@@ -18,7 +18,7 @@ Abrir a URL, entrar com o login real, criar um escopo de teste, editar, exportar
 
 ## Recuperação
 - **Publicação ruim**: Actions → Deploy → "Re-run" num commit anterior bom, ou `git revert` e push.
-- **Dados**: antes de excluir um escopo o app obriga baixar o backup `.zip` (`backup.json` + `imagens/`); restaurar via Dashboard → Importar backup (novo escopo, ou substituir com confirmação por nome). Requer a migração 0006 aplicada.
+- **Dados**: antes de excluir um escopo o app obriga baixar o backup `.zip` (`backup.json` + `imagens/`); restaurar via Dashboard → Importar backup (novo escopo, ou substituir com confirmação por nome). Requer a migração 0006 (já aplicada).
 - **Conflito de edição**: o formulário mantém o que foi digitado; use "Atualizar dados e comparar" e "Reaplicar".
 - **Imagens órfãs**: podem sobrar no bucket se uma limpeza falhar; não afetam os dados.
 - **Banco**: migrações são aditivas e só criam objetos `v2_`; aplicar em ordem. O projeto "radios" nunca deve ser tocado.
@@ -26,7 +26,6 @@ Abrir a URL, entrar com o login real, criar um escopo de teste, editar, exportar
 ## Limitações conhecidas
 - Realtime, RLS entre usuários, Storage e concorrência não foram testados contra o Supabase real (apenas Postgres local PG18 e Supabase simulado; produção é PG17).
 - Login real, deploy publicado e fluxos completos ainda não validados (dependem do Luc).
-- Migração 0006 (importação) pode ainda não estar aplicada: sem ela "Importar backup" falha.
 - Sem verificação visual em navegador real/dispositivos móveis.
-- Bundle principal ~700 kB (sem code-splitting por rota).
+- Bundle principal ~600 kB (rotas já carregadas sob demanda; o restante são bibliotecas).
 - Workflows executados com sucesso em 2026-10-14; a página publicada carrega, mas o login real e os fluxos nela ainda não foram validados.
