@@ -8,3 +8,4 @@ saida*.txt
 tools/pg-local/.server.*
 tools/pg-local/snap_*.txt
 tools/pg-local/tests_out.txt
+*.tsbuildinfo
