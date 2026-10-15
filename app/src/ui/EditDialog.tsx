@@ -92,6 +92,7 @@ export function EditDialog({ title, onClose, onSave, dirty, saving, saveDisabled
     <>
       <Dialog
         open
+        variant="form"
         title={title}
         onClose={tentarFechar}
         actions={

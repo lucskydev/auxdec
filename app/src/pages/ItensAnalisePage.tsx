@@ -157,11 +157,11 @@ function FormAnalise({ d, item, tipoNovo, onClose, onSaved }: { d: DadosEscopo; 
   return (
     <EditDialog title={`${base ? 'Editar' : 'Novo'} ${tipo === 'formula' ? 'item de fórmula' : 'item agregado'}`} onClose={onClose} onSave={() => void salvar()} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
       <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
-      <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
+      <FormField label="Descrição (opcional)" largo><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
 
       {tipo === 'formula' && (
         <>
-          <FormField label="Fórmula" hint={`Operadores + - * / ^ ( ), comparações e funções: ${Object.keys(FUNCTIONS).join(', ')}. Referencie itens como [m:Nome], [p:Nome] ou [a:Nome].`} error={errosFormula[0] ?? null}>
+          <FormField label="Fórmula" largo hint={`Operadores + - * / ^ ( ), comparações e funções: ${Object.keys(FUNCTIONS).join(', ')}. Referencie itens como [m:Nome], [p:Nome] ou [a:Nome].`} error={errosFormula[0] ?? null}>
             <textarea ref={areaRef} value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} spellCheck={false} className="mono" />
           </FormField>
           <div className="field">

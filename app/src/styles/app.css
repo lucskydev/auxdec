@@ -46,7 +46,7 @@ a { color: var(--accent); }
 .sidebar-foot { margin-top: auto; display: grid; gap: .5rem; }
 .is-collapsed .nav-link { overflow: hidden; white-space: nowrap; text-overflow: clip; padding-inline: .5rem; }
 .is-collapsed .sidebar-foot .btn { font-size: .7rem; padding-inline: .25rem; }
-.content { grid-area: main; padding: 1.25rem; max-width: 1200px; width: 100%; }
+.content { grid-area: main; padding: 1.25rem; width: 100%; min-width: 0; }
 .scope-banner { margin: 0 0 1rem; padding: .4rem .75rem; border-left: 4px solid var(--accent); background: var(--bg-elev); border-radius: 4px; }
 
 /* controls */
@@ -134,3 +134,28 @@ textarea, input, select { font: inherit; background: var(--bg); color: var(--tex
 .sync-ativo { color: var(--success, #6ccf8e); }
 .sync-reconectando, .sync-conectando { color: var(--warning); }
 .sync-erro { color: var(--danger); }
+
+/* janelas de cadastro/edição: largas, com Cancelar/Salvar fixos no topo e campos distribuídos em colunas */
+.dialog-form { width: min(96vw, 1000px); max-width: none; max-height: 94vh; padding: 0; overflow: auto; }
+.dialog-form .dialog-head { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: .75rem 1rem; flex-wrap: wrap; padding: .75rem 1.25rem; background: var(--bg-elev); border-bottom: 1px solid var(--border); }
+.dialog-form .dialog-head h2 { margin: 0; font-size: 1.15rem; }
+.dialog-form .dialog-head .dialog-actions { margin: 0; flex-wrap: nowrap; }
+.dialog-form .dialog-body { padding: 1rem 1.25rem 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); column-gap: 1.25rem; align-items: start; }
+.dialog-form .dialog-body > :is(h3, p, ul, fieldset, details, table, .notice, .valores, .span-all, .field.largo) { grid-column: 1 / -1; }
+.dialog-form .field { margin-bottom: .9rem; }
+.dialog-form .field input, .dialog-form .field select, .dialog-form .field textarea { width: 100%; }
+.dialog-form .valores { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); column-gap: 1.25rem; }
+.dialog-form .componente { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 1rem; padding: .75rem 1rem; }
+.dialog-form .componente > legend, .dialog-form .componente > button { grid-column: 1 / -1; justify-self: start; }
+.preenchimento { border: 1px dashed var(--border); border-radius: var(--radius); padding: .75rem 1rem; margin-bottom: 1rem; }
+.preenchimento textarea { width: 100%; }
+.preenchimento .row-actions { margin-top: .25rem; }
+@media (max-width: 560px) { .dialog-form { width: 100vw; max-height: 100vh; border-radius: 0; } .dialog-form .dialog-head .dialog-actions { flex-wrap: wrap; } }
+
+/* reordenação de itens */
+.ordem-cel { white-space: nowrap; width: 1%; }
+.ordem-cel .alca { cursor: grab; color: var(--muted, #8b98a9); margin-right: .35rem; user-select: none; }
+.btn-mini { padding: .1rem .4rem; min-width: 1.8rem; }
+tr[draggable="true"] { cursor: grab; }
+tr.arrastando { opacity: .45; }
+tr.alvo-soltar td { border-top: 2px solid var(--accent, #4da3ff); }

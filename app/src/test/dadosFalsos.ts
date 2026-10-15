@@ -3,7 +3,7 @@ import type { DadosEscopo, Item } from '../domain/types';
 export const ESCOPO_ID = 'e1';
 
 export function itemFalso(p: Partial<Item> & { id: string; nome: string }): Item {
-  return { escopo_id: ESCOPO_ID, descricao: null, tipo: 'numerico', unidade: null, casas_decimais: null, valor_min: null, valor_max: null, versao: 1, ...p };
+  return { escopo_id: ESCOPO_ID, descricao: null, tipo: 'numerico', unidade: null, casas_decimais: null, valor_min: null, valor_max: null, ordem: 0, versao: 1, ...p };
 }
 
 export function dadosFalsos(p: Partial<DadosEscopo> = {}): DadosEscopo {

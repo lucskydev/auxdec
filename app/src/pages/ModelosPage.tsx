@@ -3,6 +3,7 @@ import type { DadosEscopo, Modelo } from '../domain/types';
 import { impactoRemoverItemDoModelo, produtosDoModelo } from '../domain/dependencias';
 import { conflitosAoAcrescentarNoModelo } from '../domain/inheritance';
 import { validarNome } from '../domain/names';
+import { camposDaLinha, interpretarLinha } from '../features/preenchimento';
 import { desfazerEnvios, erroDoValor, limparImagensSoltas, estadoInicial, instantaneoEstado, montarValores, resumoEstado, resumoSalvo, ValoresEditor, type EstadoValores } from '../features/ValoresEditor';
 import { excluirModelo, salvarModelo } from '../services/escrita';
 import { toAppError } from '../services/errors';
@@ -25,6 +26,8 @@ function FormModelo({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: E
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [emConflito, setEmConflito] = useState(false);
+  const [linha, setLinha] = useState('');
+  const [errosLinha, setErrosLinha] = useState<string[]>([]);
   const [impacto, setImpacto] = useState<{ itens: string[]; produtos: string[]; analises: string[] } | null>(null);
   const instantaneo = JSON.stringify([nome, descricao, instantaneoEstado(estado)]);
   const [inicial] = useState(instantaneo);
@@ -37,6 +40,22 @@ function FormModelo({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: E
   const idsAtuais = d.itensModelo.filter((i) => estado[i.id]?.incluido).map((i) => i.id);
   const removidos = [...idsOriginais].filter((id) => !idsAtuais.includes(id));
   const acrescentados = idsAtuais.filter((id) => !idsOriginais.has(id));
+
+  function preencherPelaLinha() {
+    const r = interpretarLinha(linha, d.itensModelo);
+    if (!r.ok) { setErrosLinha(r.erros); return; }
+    setErrosLinha([]);
+    setNome(r.nome);
+    setDescricao(r.descricao);
+    setEstado((atual) => {
+      const novo = { ...atual };
+      for (const i of d.itensModelo) {
+        const t = r.valores[i.id]?.texto ?? '';
+        novo[i.id] = { ...(atual[i.id] ?? { incluido: false, texto: '', imgId: null, nova: null }), incluido: t !== '' || (atual[i.id]?.incluido && i.tipo === 'imagem') === true, texto: t };
+      }
+      return novo;
+    });
+  }
 
   async function gravar() {
     setSalvando(true);
@@ -94,8 +113,19 @@ function FormModelo({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: E
   return (
     <>
       <EditDialog title={base ? 'Editar modelo' : 'Novo modelo'} onClose={onClose} onSave={tentarSalvar} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
+        {!base && (
+          <div className="preenchimento span-all">
+            <FormField label="Preenchimento rápido (campos separados por ponto e vírgula)" largo hint={`Ordem: ${camposDaLinha(d.itensModelo).join('; ')}. Use ;; para deixar um campo em branco. Imagens: deixe em branco.`}>
+              <textarea value={linha} onChange={(e) => setLinha(e.target.value)} rows={2} spellCheck={false} placeholder="Ex.: Sedan; Carro de passeio; 150; Prata" />
+            </FormField>
+            <div className="row-actions">
+              <button type="button" className="btn" onClick={preencherPelaLinha} disabled={linha.trim() === '' || salvando}>Preencher campos</button>
+            </div>
+            {errosLinha.length > 0 && <ul className="field-error" role="alert">{errosLinha.map((e) => <li key={e}>{e}</li>)}</ul>}
+          </div>
+        )}
         <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
-        <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
+        <FormField label="Descrição (opcional)" largo><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
         <h3>Itens do modelo</h3>
         <p className="muted">Marque os itens que este modelo possui e informe os valores.</p>
         <ValoresEditor d={d} itens={d.itensModelo} estado={estado} onChange={setEstado} selecionavel desabilitar={salvando} />

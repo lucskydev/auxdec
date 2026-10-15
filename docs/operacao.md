@@ -28,11 +28,14 @@ Abrir a URL, entrar com o login real, criar um escopo de teste, editar, exportar
 ## Recuperação
 - **Publicação ruim**: Actions → Deploy → "Re-run" num commit anterior bom, ou `git revert` e push.
 - **Dados**: antes de excluir um escopo o app obriga baixar o backup `.zip` (`backup.json` + `imagens/`); restaurar via Dashboard → Importar backup (novo escopo, ou substituir com confirmação por nome). Requer a migração 0006 (já aplicada).
+- **Migração 0007 (ordem dos itens)**: aplicar no SQL Editor antes de publicar a versão do app que reordena itens; é aditiva (coluna `ordem`, trigger, RPC `v2_reordenar_itens`) e preenche a ordem dos itens existentes por data de criação.
 - **Conflito de edição**: o formulário mantém o que foi digitado; use "Atualizar dados e comparar" e "Reaplicar".
 - **Imagens órfãs**: podem sobrar no bucket se uma limpeza falhar; não afetam os dados.
 - **Banco**: migrações são aditivas e só criam objetos `v2_`; aplicar em ordem. O projeto "radios" nunca deve ser tocado.
 
 ## Limitações conhecidas
+- Preenchimento rápido do modelo: `;` não pode aparecer dentro de um texto (sem escape) e itens de imagem não são preenchíveis por ele.
+- Reordenar por arrastar usa o recurso nativo do navegador; em telas de toque use ▲ ▼.
 - Realtime, RLS entre usuários, Storage e concorrência não foram testados contra o Supabase real (apenas Postgres local PG18 e Supabase simulado; produção é PG17).
 - Login real, deploy publicado e fluxos completos ainda não validados (dependem do Luc).
 - Sem verificação visual em navegador real/dispositivos móveis.

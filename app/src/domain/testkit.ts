@@ -15,12 +15,12 @@ export class Fabrica {
     config: { id: 'c', escopo_id: 'e', modo: 'ambos', logica_global: 'AND', agregado_ranking_id: null, colunas: {}, ordenacao: [], versao: 1 },
   };
   itemM(nome: string, tipo: TipoItem = 'numerico'): Item {
-    const i: Item = { id: uid(), escopo_id: 'e', nome, descricao: null, tipo, unidade: null, casas_decimais: null, valor_min: null, valor_max: null, versao: 1 };
+    const i: Item = { id: uid(), escopo_id: 'e', nome, descricao: null, tipo, unidade: null, casas_decimais: null, valor_min: null, valor_max: null, ordem: 0, versao: 1 };
     this.d.itensModelo.push(i);
     return i;
   }
   itemP(nome: string, tipo: TipoItem = 'numerico'): Item {
-    const i: Item = { id: uid(), escopo_id: 'e', nome, descricao: null, tipo, unidade: null, casas_decimais: null, valor_min: null, valor_max: null, versao: 1 };
+    const i: Item = { id: uid(), escopo_id: 'e', nome, descricao: null, tipo, unidade: null, casas_decimais: null, valor_min: null, valor_max: null, ordem: 0, versao: 1 };
     this.d.itensProduto.push(i);
     return i;
   }

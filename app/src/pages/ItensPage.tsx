@@ -4,7 +4,7 @@ import { CARACTERES_PROIBIDOS_EM_NOME } from '../domain/formula/display';
 import { dependenciasItemModelo, dependenciasItemProduto } from '../domain/dependencias';
 import { chaveNome, validarNome } from '../domain/names';
 import { lerNumero, numeroParaTexto } from '../features/numeros';
-import { criarItem, atualizarItem, excluirItem, type TabelaItem, type ItemEntrada } from '../services/escrita';
+import { criarItem, atualizarItem, excluirItem, reordenarItens, type TabelaItem, type ItemEntrada } from '../services/escrita';
 import { toAppError } from '../services/errors';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Carga } from '../ui/Carga';
@@ -101,7 +101,7 @@ function FormItem({ tabela, item, d, onClose, onSaved }: { tabela: TabelaItem; i
           {Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </FormField>
-      <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
+      <FormField label="Descrição (opcional)" largo><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
       {num && (
         <>
           <FormField label="Unidade (opcional)"><input value={unidade} onChange={(e) => setUnidade(e.target.value)} maxLength={20} /></FormField>
@@ -121,11 +121,38 @@ export function ItensPage({ tabela }: { tabela: TabelaItem }) {
   const [del, setDel] = useState<Item | null>(null);
   const [delBusy, setDelBusy] = useState(false);
   const [delErro, setDelErro] = useState<string | null>(null);
+  /** Ordem otimista enquanto o servidor confirma; só vale enquanto a ordem do servidor não mudou (`base`). */
+  const [local, setLocal] = useState<{ base: string; ids: string[] } | null>(null);
+  const [arrastando, setArrastando] = useState<string | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const [movendo, setMovendo] = useState(false);
 
   return (
     <Carga titulo={titulo}>
       {(d, recarregar) => {
-        const itens = tabela === 'v2_itens_modelo' ? d.itensModelo : d.itensProduto;
+        const doServidor = tabela === 'v2_itens_modelo' ? d.itensModelo : d.itensProduto;
+        const chaveServidor = doServidor.map((i) => i.id).join(',');
+        const itens = local && local.base === chaveServidor
+          ? local.ids.map((id) => doServidor.find((i) => i.id === id)).filter((i): i is Item => i !== undefined)
+          : doServidor;
+        async function mover(id: string, destino: number) {
+          const ids = itens.map((i) => i.id);
+          const de = ids.indexOf(id);
+          if (de < 0 || destino < 0 || destino >= ids.length || destino === de || movendo) return;
+          ids.splice(de, 1);
+          ids.splice(destino, 0, id);
+          setLocal({ base: chaveServidor, ids });
+          setMovendo(true);
+          try {
+            await reordenarItens(d.escopo.id, tabela, ids);
+            recarregar();
+          } catch (e) {
+            setLocal(null);
+            notify('error', `Não foi possível reordenar: ${toAppError(e).message}`);
+          } finally {
+            setMovendo(false);
+          }
+        }
         const deps = del ? (tabela === 'v2_itens_modelo' ? dependenciasItemModelo(d, del.id) : dependenciasItemProduto(d, del.id)) : [];
         return (
           <section>
@@ -134,16 +161,30 @@ export function ItensPage({ tabela }: { tabela: TabelaItem }) {
               {tabela === 'v2_itens_modelo'
                 ? 'Atributos reutilizáveis que compõem os modelos. Cada modelo escolhe quais itens possui.'
                 : 'Atributos próprios de produto (específicos do exemplar, como cor ou quilometragem).'}
+              {' '}Arraste uma linha (ou use ▲ ▼) para mudar a ordem: ela vale nos cadastros e na análise.
             </p>
             <p><button type="button" className="btn btn-primary" onClick={() => setEdit({ item: null })}>Novo item</button></p>
             {itens.length === 0 ? (
               <div className="card"><p>Nenhum item ainda.</p></div>
             ) : (
               <table className="tabela">
-                <thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Limites</th><th>Ações</th></tr></thead>
+                <thead><tr><th aria-label="Ordem"></th><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Limites</th><th>Ações</th></tr></thead>
                 <tbody>
-                  {itens.map((i) => (
-                    <tr key={i.id}>
+                  {itens.map((i, n) => (
+                    <tr
+                      key={i.id}
+                      draggable={!movendo}
+                      className={`${arrastando === i.id ? 'arrastando' : ''} ${sobre === i.id && arrastando !== i.id ? 'alvo-soltar' : ''}`}
+                      onDragStart={(e) => { setArrastando(i.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', i.id); }}
+                      onDragOver={(e) => { if (arrastando) { e.preventDefault(); setSobre(i.id); } }}
+                      onDrop={(e) => { e.preventDefault(); const id = arrastando; setArrastando(null); setSobre(null); if (id) void mover(id, n); }}
+                      onDragEnd={() => { setArrastando(null); setSobre(null); }}
+                    >
+                      <td className="ordem-cel">
+                        <span className="alca" aria-hidden="true" title="Arraste para reordenar">⠿</span>
+                        <button type="button" className="btn btn-mini" aria-label={`Mover ${i.nome} para cima`} disabled={n === 0 || movendo} onClick={() => void mover(i.id, n - 1)}>▲</button>
+                        <button type="button" className="btn btn-mini" aria-label={`Mover ${i.nome} para baixo`} disabled={n === itens.length - 1 || movendo} onClick={() => void mover(i.id, n + 1)}>▼</button>
+                      </td>
                       <td>{i.nome}{i.descricao && <div className="muted">{i.descricao}</div>}</td>
                       <td>{TIPOS[i.tipo]}</td>
                       <td>{i.unidade ?? '—'}</td>

@@ -100,7 +100,7 @@ function FormFiltro({ d, filtro, onClose, onSaved }: { d: DadosEscopo; filtro: F
   return (
     <EditDialog title={base0 ? 'Editar filtro' : 'Novo filtro'} onClose={onClose} onSave={() => void salvar()} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
       <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
-      <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
+      <FormField label="Descrição (opcional)" largo><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
       <FormField label="Combinar condições com">
         <select value={logica} onChange={(e) => setLogica(e.target.value as Logica)}>
           <option value="AND">E (todas devem valer)</option>

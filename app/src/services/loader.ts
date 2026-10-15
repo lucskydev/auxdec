@@ -17,7 +17,7 @@ async function todas<T>(tabela: string, colunas: string, escopoId: string, ordem
   }
 }
 
-const ITEM = 'id, escopo_id, nome, descricao, tipo, unidade, casas_decimais, valor_min, valor_max, versao';
+const ITEM = 'id, escopo_id, nome, descricao, tipo, unidade, casas_decimais, valor_min, valor_max, ordem, versao';
 
 /** Carrega tudo o que pertence ao escopo (sem paginação na interface; a análise precisa do conjunto completo). */
 export async function carregarEscopo(escopoId: string): Promise<DadosEscopo> {
@@ -28,8 +28,8 @@ export async function carregarEscopo(escopoId: string): Promise<DadosEscopo> {
 
   const [itensModelo, itensProduto, modelos, produtos, imagens, modeloValores, produtoValores, itensAnalise, analiseRefs, agregadoComponentes, filtros, filtroCondicoes, cfg] =
     await Promise.all([
-      todas<DadosEscopo['itensModelo'][number]>('v2_itens_modelo', ITEM, escopoId, ['id']),
-      todas<DadosEscopo['itensProduto'][number]>('v2_itens_produto', ITEM, escopoId, ['id']),
+      todas<DadosEscopo['itensModelo'][number]>('v2_itens_modelo', ITEM, escopoId, ['ordem', 'id']),
+      todas<DadosEscopo['itensProduto'][number]>('v2_itens_produto', ITEM, escopoId, ['ordem', 'id']),
       todas<DadosEscopo['modelos'][number]>('v2_modelos', 'id, escopo_id, nome, descricao, versao', escopoId, ['id']),
       todas<DadosEscopo['produtos'][number]>('v2_produtos', 'id, escopo_id, nome, descricao, modelo_id, versao', escopoId, ['id']),
       todas<DadosEscopo['imagens'][number]>('v2_imagens', 'id, escopo_id, storage_path, largura, altura, bytes, mime', escopoId, ['id']),

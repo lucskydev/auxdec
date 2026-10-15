@@ -15,7 +15,7 @@ concurrency:
 jobs:
   app:
     name: App (tipos, lint, testes, build)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: app
@@ -39,7 +39,7 @@ jobs:
 
   banco:
     name: Banco (migrações e testes SQL em Postgres descartável)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

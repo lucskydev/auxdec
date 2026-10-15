@@ -52,6 +52,7 @@ reset role;
 select t.ok(t.restos_escopo(:'n1') = 1 + 2 + 2 + 1 + 1 + 1 + 2 + 2 + 2 + 1 + 2 + 1 + 1 + 1,
   'importação cria escopo, itens, modelo, produto, imagem, valores, análises, refs, componentes, filtro, condição e config');
 select t.ok((select nome from public.v2_escopos where id = :'n1') = 'Importado', 'nome final vem de p_nome');
+select t.ok((select array_agg(nome order by ordem) from public.v2_itens_modelo where escopo_id = :'n1') = array['Preço', 'Foto'], 'importação preserva a ordem dos itens do arquivo (0007)');
 select t.ok(not exists (select 1 from public.v2_itens_modelo where id::text like '11111111-%'), 'nenhum id antigo foi reaproveitado (itens)');
 select t.ok(not exists (select 1 from public.v2_modelos where id::text like '11111111-%') and not exists (select 1 from public.v2_imagens where id::text like '11111111-%'), 'nenhum id antigo foi reaproveitado (modelos, imagens)');
 select t.ok((select formula_texto from public.v2_itens_analise where nome = 'Dobro' and escopo_id = :'n1')

@@ -6,10 +6,12 @@ interface Props {
   onClose: () => void;
   children: ReactNode;
   actions: ReactNode;
+  /** 'form': janela larga de cadastro/edição, com Cancelar/Salvar fixos no topo. */
+  variant?: 'form';
 }
 
 /** Diálogo modal nativo (<dialog>): foco preso, Esc fecha, utilizável por teclado. */
-export function Dialog({ open, title, onClose, children, actions }: Props) {
+export function Dialog({ open, title, onClose, children, actions, variant }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function Dialog({ open, title, onClose, children, actions }: Props) {
   return (
     <dialog
       ref={ref}
-      className="dialog"
+      className={variant === 'form' ? 'dialog dialog-form' : 'dialog'}
       aria-labelledby="dialog-title"
       onCancel={(e) => {
         e.preventDefault();
@@ -30,11 +32,21 @@ export function Dialog({ open, title, onClose, children, actions }: Props) {
       }}
     >
       {open && (
-        <div>
-          <h2 id="dialog-title">{title}</h2>
-          <div className="dialog-body">{children}</div>
-          <div className="dialog-actions">{actions}</div>
-        </div>
+        variant === 'form' ? (
+          <div>
+            <div className="dialog-head">
+              <h2 id="dialog-title">{title}</h2>
+              <div className="dialog-actions">{actions}</div>
+            </div>
+            <div className="dialog-body">{children}</div>
+          </div>
+        ) : (
+          <div>
+            <h2 id="dialog-title">{title}</h2>
+            <div className="dialog-body">{children}</div>
+            <div className="dialog-actions">{actions}</div>
+          </div>
+        )
       )}
     </dialog>
   );

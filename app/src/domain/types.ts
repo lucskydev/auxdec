@@ -20,6 +20,8 @@ export interface Item {
   casas_decimais: number | null;
   valor_min: number | null;
   valor_max: number | null;
+  /** Posição manual na lista de itens do escopo (1, 2, 3…). */
+  ordem: number;
   versao: number;
 }
 export type ItemModelo = Item;

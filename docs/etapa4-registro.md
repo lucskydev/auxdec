@@ -34,3 +34,6 @@ As RPCs terminam com `set constraints all immediate`; por isso `t.popular` (06) 
 
 ## Correção pós-validação (2026-10-14)
 O backup só era acessível pelo diálogo de exclusão. Adicionado botão "Exportar backup" em cada escopo do Dashboard (bloqueia se alguma imagem falhar). 2 testes.
+
+## Adendo 2026-10-15
+Ajustes de interface e ordem dos itens: ver `docs/ajustes-2026-10-15.md`.

@@ -57,7 +57,7 @@ function FormEscopo({ modo, escopos, onClose, onSaved }: { modo: NonNullable<Mod
       <FormField label="Nome" error={erroNome}>
         <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} autoFocus />
       </FormField>
-      <FormField label="Descrição (opcional)">
+      <FormField label="Descrição (opcional)" largo>
         <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} maxLength={500} />
       </FormField>
     </EditDialog>

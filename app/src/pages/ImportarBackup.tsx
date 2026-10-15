@@ -72,7 +72,7 @@ export function ImportarBackup({ escopos, onClose, onDone }: Props) {
 
   const r = zip?.validacao.resumo;
   return (
-    <Dialog open title="Importar backup" onClose={() => !trabalhando && onClose()}
+    <Dialog open variant="form" title="Importar backup" onClose={() => !trabalhando && onClose()}
       actions={<>
         <button type="button" className="btn" onClick={onClose} disabled={trabalhando}>Cancelar</button>
         <button type="button" className={`btn ${modo === 'substituir' ? 'btn-danger' : 'btn-primary'}`} onClick={() => void importar()} disabled={!pronto || trabalhando}>

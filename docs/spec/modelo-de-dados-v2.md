@@ -230,3 +230,7 @@ Variáveis: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (em `.env.example`; `.
 ## 14. Próximo passo
 
 Após sua revisão: Etapa 2 (metadados de colisão + migrações SQL e testes de segurança), sem aplicar nada antes de listar os objetos afetados e receber sua confirmação.
+
+
+## Adendo (migração 0007, 2026-10-15)
+`v2_itens_modelo` e `v2_itens_produto` ganham `ordem integer not null` (posição manual no escopo; item novo vai para o fim; reordenar via RPC `v2_reordenar_itens`, sem alterar `versao`). Detalhes em `docs/ajustes-2026-10-15.md`.

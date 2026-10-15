@@ -69,6 +69,10 @@ export async function criarItem(tabela: TabelaItem, escopoId: string, e: ItemEnt
 export async function atualizarItem(tabela: TabelaItem, item: Item, e: Omit<ItemEntrada, 'tipo'>): Promise<Item> {
   return linha(getSupabase().from(tabela).update({ ...e, nome: e.nome.trim(), versao: proxima(item.versao) }).eq('id', item.id).select('*').single());
 }
+/** `ids` = TODOS os itens do escopo na nova ordem. Não mexe na versão dos itens. */
+export async function reordenarItens(escopoId: string, tabela: TabelaItem, ids: string[]): Promise<void> {
+  await ok(getSupabase().rpc('v2_reordenar_itens', { p_escopo_id: escopoId, p_tabela: tabela.replace('v2_', ''), p_ids: ids }));
+}
 export async function excluirItem(tabela: TabelaItem, id: string): Promise<void> {
   await ok(getSupabase().from(tabela).delete().eq('id', id));
 }

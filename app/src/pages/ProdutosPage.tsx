@@ -34,8 +34,11 @@ function FormProduto({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: 
   const errosValores = d.itensProduto.filter((i) => erroDoValor(i, estado[i.id]!) !== null);
   const invalido = validarNome(nome, d.produtos, base?.id) !== null || errosValores.length > 0 || conflitos.length > 0;
 
-  const herdados = modeloId ? d.modeloValores.filter((v) => v.modelo_id === modeloId) : [];
   const itensModelo = new Map(d.itensModelo.map((i) => [i.id, i]));
+  const posicao = new Map(d.itensModelo.map((i, n) => [i.id, n]));
+  const herdados = modeloId
+    ? d.modeloValores.filter((v) => v.modelo_id === modeloId).sort((a, b) => (posicao.get(a.item_modelo_id) ?? 0) - (posicao.get(b.item_modelo_id) ?? 0))
+    : [];
 
   async function salvar() {
     if (invalido) return;
@@ -73,7 +76,7 @@ function FormProduto({ d, edicao, onClose, onSaved }: { d: DadosEscopo; edicao: 
   return (
     <EditDialog title={base ? 'Editar produto' : 'Novo produto'} onClose={onClose} onSave={() => void salvar()} dirty={instantaneo !== inicial} saving={salvando} saveDisabled={invalido} erro={erro} conflito={conflito}>
       <FormField label="Nome" error={erroNome}><input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={200} autoFocus /></FormField>
-      <FormField label="Descrição (opcional)"><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
+      <FormField label="Descrição (opcional)" largo><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} maxLength={500} /></FormField>
       <FormField label="Modelo">
         <select value={modeloId} onChange={(e) => setModeloId(e.target.value)} disabled={salvando}>
           <option value="">(sem modelo)</option>

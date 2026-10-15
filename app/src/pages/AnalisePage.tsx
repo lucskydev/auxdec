@@ -47,7 +47,7 @@ function EditorColunas({ d, cfg, modo, onClose, onApply }: { d: DadosEscopo; cfg
   const alt = (s: Set<string>, k: string, on: boolean) => { const n = new Set(s); if (on) n.add(k); else n.delete(k); return n; };
   void modo;
   return (
-    <Dialog open title="Colunas da análise" onClose={onClose}
+    <Dialog open variant="form" title="Colunas da análise" onClose={onClose}
       actions={<>
         <button type="button" className="btn" onClick={onClose}>Cancelar</button>
         <button type="button" className="btn btn-primary" onClick={() => {

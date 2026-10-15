@@ -1,15 +1,15 @@
 # Auxdec v2 — STATUS (leia isto primeiro ao retomar)
 
-Atualizado: 2026-10-14 (app publicado e validado manualmente pelo Luc; Etapas 4–5 completas no código; Etapa 6 parcial; Etapa 7 parcial).
+Atualizado: 2026-10-15 (app publicado e validado manualmente pelo Luc; Etapas 4–5 completas no código; Etapa 6 parcial; Etapa 7 parcial). Ajustes pedidos em 2026-10-15 feitos no código: ver `docs/ajustes-2026-10-15.md`. **Migração 0007 (ordem dos itens) escrita e testada localmente, AINDA NÃO aplicada no Supabase; o app que a usa só deve ser enviado/publicado depois que o Luc aplicar.**
 
 ## Onde está cada coisa
 | O quê | Onde |
 |---|---|
 | Especificação do Luc (prompt mestre, regras de segurança, modelo de dados aprovado D1–D10) | `docs/spec/` |
-| Banco: migrações SQL (todas **já aplicadas** no projeto "sistemas") | `supabase/migrations/` |
-| Testes de banco (228) e executor local | `supabase/tests/`, `tools/pg-local/` |
+| Banco: migrações SQL (0001–0006 **aplicadas** no projeto "sistemas"; 0007 pendente) | `supabase/migrations/` |
+| Testes de banco (288) e executor local | `supabase/tests/`, `tools/pg-local/` |
 | Aplicação React/TS/Vite | `app/` |
-| Registros por etapa | `docs/etapa2-registro.md`, `docs/etapa3-registro.md`, este arquivo |
+| Registros por etapa | `docs/etapa2-registro.md`, `docs/etapa3-registro.md`, `docs/ajustes-2026-10-15.md`, este arquivo |
 
 ## Estado das etapas (spec seção 24)
 | Etapa | Estado |

@@ -99,3 +99,45 @@ describe('ModelosPage', () => {
     expect((screen.getByRole('button', { name: 'Salvar' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+describe('ModelosPage: preenchimento rápido', () => {
+  async function novoModelo() {
+    montar();
+    await userEvent.click(screen.getByRole('button', { name: 'Novo modelo' }));
+  }
+  const linha = () => screen.getByLabelText(/Preenchimento rápido/) as HTMLTextAreaElement;
+  async function colar(texto: string) {
+    await userEvent.click(linha());
+    await userEvent.paste(texto);
+    await userEvent.click(screen.getByRole('button', { name: 'Preencher campos' }));
+  }
+
+  it('só aparece ao criar (não ao editar)', async () => {
+    await novoModelo();
+    expect(linha()).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }));
+    expect(screen.queryByLabelText(/Preenchimento rápido/)).toBeNull();
+  });
+
+  it('mostra a ordem dos campos e preenche nome, descrição e valores; ;; deixa em branco', async () => {
+    await novoModelo();
+    expect(screen.getByText(/Ordem: Nome; Descrição; Potência; Peso/)).toBeTruthy();
+    await colar('Hatch; Compacto; 90;;');
+    expect((screen.getByLabelText('Nome') as HTMLInputElement).value).toBe('Hatch');
+    expect((screen.getByLabelText('Descrição (opcional)') as HTMLTextAreaElement).value).toBe('Compacto');
+    expect(campo('Potência').value).toBe('90');
+    expect(screen.queryByLabelText('Valor de Peso')).toBeNull(); // em branco: item não incluído
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await vi.waitFor(() => expect(salvas).toHaveLength(1));
+    expect(salvas[0]?.p.valores.map((v) => [v.item_id, v.valor_num])).toEqual([['i1', 90]]);
+  });
+
+  it('erro na linha não altera nada e lista os problemas', async () => {
+    await novoModelo();
+    await userEvent.type(screen.getByLabelText('Nome'), 'Manual');
+    await colar('Hatch;;abc');
+    expect(await screen.findByText(/"Potência"/)).toBeTruthy();
+    expect((screen.getByLabelText('Nome') as HTMLInputElement).value).toBe('Manual');
+  });
+});

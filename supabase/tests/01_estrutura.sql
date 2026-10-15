@@ -58,13 +58,13 @@ select t.ok(
                  and has_function_privilege('authenticated', p.oid, 'execute')),
   'authenticated sem EXECUTE nas funções de trigger v2_trg_*');
 
--- Só as 7 RPCs são executáveis por authenticated
+-- Só as 8 RPCs são executáveis por authenticated
 select t.ok(
   (select array_agg(p.proname::text order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname like 'v2\_%' and has_function_privilege('authenticated', p.oid, 'execute'))
-  = array['v2_excluir_escopo', 'v2_importar_escopo', 'v2_salvar_analise_agregado', 'v2_salvar_analise_formula',
+  = array['v2_excluir_escopo', 'v2_importar_escopo', 'v2_reordenar_itens', 'v2_salvar_analise_agregado', 'v2_salvar_analise_formula',
           'v2_salvar_filtro', 'v2_salvar_modelo', 'v2_salvar_produto'],
-  'authenticated executa somente as 7 RPCs v2_');
+  'authenticated executa somente as 8 RPCs v2_');
 
 -- Toda função v2_ tem search_path fixo; RPCs são SECURITY DEFINER
 select t.ok(
@@ -75,7 +75,7 @@ select t.ok(
 
 select t.ok(
   not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-               where n.nspname = 'public' and (p.proname like 'v2\_salvar\_%' or p.proname in ('v2_excluir_escopo', 'v2_importar_escopo'))
+               where n.nspname = 'public' and (p.proname like 'v2\_salvar\_%' or p.proname in ('v2_excluir_escopo', 'v2_importar_escopo', 'v2_reordenar_itens'))
                  and not p.prosecdef),
   'RPCs v2_ são SECURITY DEFINER');
 
